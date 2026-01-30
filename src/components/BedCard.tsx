@@ -100,6 +100,7 @@ export function BedCard({ bed, onClick }: BedCardProps) {
   const isVacant = bed.status === 'vacant';
   const isOutOfService = bed.status === 'out_of_service';
   const stripColor = getStatusStripColor(bed);
+  const hasSharedBathroom = bed.room?.has_shared_bathroom;
 
   // Out of Service Card
   if (isOutOfService) {
@@ -114,9 +115,16 @@ export function BedCard({ bed, onClick }: BedCardProps) {
         <div className="status-strip bg-gray-900" />
         <div className="p-4 flex flex-col h-full grayscale">
           <div className="flex justify-between items-start mb-3">
-            <span className="text-xs font-bold text-[#4c739a] bg-slate-100 px-2 py-0.5 rounded">
-              {getRoomLabel(bed)}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-[#4c739a] bg-slate-100 px-2 py-0.5 rounded">
+                {getRoomLabel(bed)}
+              </span>
+              {hasSharedBathroom && (
+                <span title="Shared Bathroom">
+                  <Icon name="shower" size={14} className="text-slate-400" />
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex flex-col gap-1 items-center justify-center py-4">
             <Icon name="construction" size={32} className="text-slate-400" />
@@ -144,9 +152,14 @@ export function BedCard({ bed, onClick }: BedCardProps) {
       >
         <div className="p-4 flex flex-col h-full">
           <div className="flex justify-between items-start mb-3">
-            <span className="text-xs font-bold text-[#4c739a] bg-slate-100 px-2 py-0.5 rounded">
-              {getRoomLabel(bed)}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-[#4c739a] bg-slate-100 px-2 py-0.5 rounded">
+                {getRoomLabel(bed)}
+              </span>
+              {hasSharedBathroom && (
+                <span title="Shared Bathroom"><Icon name="shower" size={14} className="text-cyan-500" /></span>
+              )}
+            </div>
           </div>
           <div className="flex flex-col gap-2 items-center justify-center py-6">
             <p className="text-sm font-bold text-primary-500">VACANT</p>
@@ -185,9 +198,14 @@ export function BedCard({ bed, onClick }: BedCardProps) {
       <div className="p-4 flex flex-col h-full">
         {/* Room Badge & Menu */}
         <div className="flex justify-between items-start mb-3">
-          <span className="text-xs font-bold text-[#4c739a] bg-slate-100 px-2 py-0.5 rounded">
-            {getRoomLabel(bed)}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-[#4c739a] bg-slate-100 px-2 py-0.5 rounded">
+              {getRoomLabel(bed)}
+            </span>
+            {hasSharedBathroom && (
+              <span title="Shared Bathroom"><Icon name="shower" size={14} className="text-cyan-500" /></span>
+            )}
+          </div>
           <Icon name="more_horiz" size={20} className="text-slate-300" />
         </div>
 
