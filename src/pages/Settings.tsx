@@ -496,95 +496,77 @@ export function Settings() {
           </div>
         </div>
 
-        {/* Payor Source Monthly Rates */}
+        {/* Case-Mix (Budgeted Residents by Payor) */}
         <div>
           <label className="block text-sm font-medium text-[#0d141b] mb-3">
-            Payor Source Monthly Rates
+            Case-Mix <span className="font-normal text-[#4c739a]">(Budgeted Residents)</span>
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
               <label className="block text-xs text-[#4c739a] mb-1">Private</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={payorRates.private || ''}
-                  onChange={(e) => updatePayorRate('private', e.target.value)}
-                  placeholder="0"
-                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+              <input
+                type="number"
+                min="0"
+                value={payorRates.private || ''}
+                onChange={(e) => updatePayorRate('private', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+              />
             </div>
             <div>
               <label className="block text-xs text-[#4c739a] mb-1">Medicare</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={payorRates.medicare || ''}
-                  onChange={(e) => updatePayorRate('medicare', e.target.value)}
-                  placeholder="0"
-                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+              <input
+                type="number"
+                min="0"
+                value={payorRates.medicare || ''}
+                onChange={(e) => updatePayorRate('medicare', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+              />
             </div>
             <div>
               <label className="block text-xs text-[#4c739a] mb-1">Medicaid</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={payorRates.medicaid || ''}
-                  onChange={(e) => updatePayorRate('medicaid', e.target.value)}
-                  placeholder="0"
-                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+              <input
+                type="number"
+                min="0"
+                value={payorRates.medicaid || ''}
+                onChange={(e) => updatePayorRate('medicaid', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+              />
             </div>
             <div>
               <label className="block text-xs text-[#4c739a] mb-1">Managed Care</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={payorRates.managed_care || ''}
-                  onChange={(e) => updatePayorRate('managed_care', e.target.value)}
-                  placeholder="0"
-                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+              <input
+                type="number"
+                min="0"
+                value={payorRates.managed_care || ''}
+                onChange={(e) => updatePayorRate('managed_care', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+              />
             </div>
             <div>
               <label className="block text-xs text-[#4c739a] mb-1">Hospice</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={payorRates.hospice || ''}
-                  onChange={(e) => updatePayorRate('hospice', e.target.value)}
-                  placeholder="0"
-                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+              <input
+                type="number"
+                min="0"
+                value={payorRates.hospice || ''}
+                onChange={(e) => updatePayorRate('hospice', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+              />
             </div>
             <div>
               <label className="block text-xs text-[#4c739a] mb-1">Other</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={payorRates.other || ''}
-                  onChange={(e) => updatePayorRate('other', e.target.value)}
-                  placeholder="0"
-                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+              <input
+                type="number"
+                min="0"
+                value={payorRates.other || ''}
+                onChange={(e) => updatePayorRate('other', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+              />
             </div>
           </div>
         </div>
