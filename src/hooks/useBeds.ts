@@ -60,7 +60,7 @@ export function useBeds(filters?: FilterOptions) {
         ),
         current_assignment:bed_assignments(
           *,
-          patient:patients(*)
+          patient:residents(*)
         )
       `)
       .is('current_assignment.discharged_at', null)
@@ -168,10 +168,10 @@ export function useBedStats() {
         .is('discharged_at', null)
         .eq('is_isolation', true);
 
-      // Get case mix from active assignments with patient payer info
+      // Get case mix from active assignments with resident payer info
       const { data: assignmentsData } = await supabase
         .from('bed_assignments')
-        .select('patient:patients(payer_type)')
+        .select('patient:residents(payer_type)')
         .is('discharged_at', null);
 
       const caseMix = { private: 0, medicare: 0, medicaid: 0, managed_care: 0 };
@@ -266,7 +266,7 @@ export function useBedActions() {
   async function assignPatient(
     bedId: string,
     patientId: string,
-    assignedBy: string,
+    assignedBy?: string,
     isIsolation: boolean = false,
     notes?: string
   ) {
@@ -278,7 +278,7 @@ export function useBedActions() {
     const { error: assignError } = await supabase.from('bed_assignments').insert({
       bed_id: bedId,
       patient_id: patientId,
-      assigned_by: assignedBy,
+      assigned_by: assignedBy || null,
       is_isolation: isIsolation,
       notes,
     });
