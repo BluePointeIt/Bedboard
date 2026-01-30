@@ -40,7 +40,6 @@ export function Settings() {
   const [saved, setSaved] = useState(false);
 
   // Budget settings state
-  const [occupancyTarget, setOccupancyTarget] = useState(85);
   const [payorRates, setPayorRates] = useState<PayorRates>(DEFAULT_PAYOR_RATES);
   const [budgetSaved, setBudgetSaved] = useState(false);
 
@@ -104,11 +103,6 @@ export function Settings() {
       setFacilityName(savedFacilityName);
     }
 
-    const savedOccupancyTarget = localStorage.getItem('occupancyTarget');
-    if (savedOccupancyTarget) {
-      setOccupancyTarget(Number(savedOccupancyTarget));
-    }
-
     const savedPayorRates = localStorage.getItem('payorRates');
     if (savedPayorRates) {
       try {
@@ -132,6 +126,10 @@ export function Settings() {
   // Calculate total beds
   const totalBeds = wings.reduce((sum, wing) => sum + (wing.total_beds || 0), 0);
 
+  // Calculate case-mix total and derived occupancy target
+  const caseMixTotal = Object.values(payorRates).reduce((sum, val) => sum + val, 0);
+  const calculatedOccupancyTarget = totalBeds > 0 ? Math.round((caseMixTotal / totalBeds) * 100) : 0;
+
   const handleSaveFacility = () => {
     localStorage.setItem('facilityName', facilityName);
     setSaved(true);
@@ -139,7 +137,7 @@ export function Settings() {
   };
 
   const handleSaveBudget = () => {
-    localStorage.setItem('occupancyTarget', String(occupancyTarget));
+    localStorage.setItem('occupancyTarget', String(calculatedOccupancyTarget));
     localStorage.setItem('payorRates', JSON.stringify(payorRates));
     setBudgetSaved(true);
     setTimeout(() => setBudgetSaved(false), 2000);
@@ -472,30 +470,6 @@ export function Settings() {
           </div>
         </div>
 
-        {/* Occupancy Target */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-[#0d141b] mb-2">
-            Facility Occupancy Target
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={occupancyTarget}
-              onChange={(e) => setOccupancyTarget(Number(e.target.value))}
-              className="w-24 px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
-            />
-            <span className="text-lg font-medium text-[#4c739a]">%</span>
-            <div className="flex-1 h-3 bg-[#e7edf3] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-green-500 transition-all duration-300"
-                style={{ width: `${Math.min(occupancyTarget, 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Case-Mix (Budgeted Residents by Payor) */}
         <div>
           <label className="block text-sm font-medium text-[#0d141b] mb-3">
@@ -569,6 +543,34 @@ export function Settings() {
               />
             </div>
           </div>
+        </div>
+
+        {/* Calculated Occupancy Target */}
+        <div className="mt-6 p-4 bg-[#f6f7f8] rounded-lg border border-[#e7edf3]">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-medium text-[#0d141b]">Calculated Occupancy Target</p>
+              <p className="text-xs text-[#4c739a]">
+                {caseMixTotal} budgeted residents / {totalBeds} total beds
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="text-3xl font-bold text-green-600">{calculatedOccupancyTarget}%</span>
+            </div>
+          </div>
+          <div className="h-3 bg-[#e7edf3] rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all duration-300 ${
+                calculatedOccupancyTarget > 100 ? 'bg-red-500' : 'bg-green-500'
+              }`}
+              style={{ width: `${Math.min(calculatedOccupancyTarget, 100)}%` }}
+            />
+          </div>
+          {calculatedOccupancyTarget > 100 && (
+            <p className="text-xs text-red-600 mt-2">
+              Warning: Budgeted residents exceed total bed capacity
+            </p>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end">
