@@ -15,8 +15,15 @@ export interface Room {
   id: string;
   wing_id: string;
   room_number: string;
+  has_shared_bathroom: boolean;
+  shared_bathroom_group_id?: string | null;
   created_at: string;
   wing?: Wing;
+}
+
+// Extended room type with beds
+export interface RoomWithBeds extends Room {
+  beds: Bed[];
 }
 
 // Bed types

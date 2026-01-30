@@ -194,5 +194,61 @@ export function useBedActions() {
     return { error: bedError };
   }
 
-  return { updateBedStatus, assignResident, unassignResident };
+  const createBed = async (roomId: string, bedLetter: string) => {
+    const { data, error } = await supabase
+      .from('beds')
+      .insert({
+        room_id: roomId,
+        bed_letter: bedLetter.toUpperCase(),
+        status: 'vacant',
+      })
+      .select()
+      .single();
+
+    return { error, data };
+  };
+
+  const deleteBed = async (bedId: string) => {
+    // First check if the bed is vacant
+    const { data: bed, error: fetchError } = await supabase
+      .from('beds')
+      .select('status')
+      .eq('id', bedId)
+      .single();
+
+    if (fetchError) {
+      return { error: fetchError };
+    }
+
+    if (bed.status !== 'vacant') {
+      return { error: new Error('Can only delete vacant beds') };
+    }
+
+    const { error } = await supabase
+      .from('beds')
+      .delete()
+      .eq('id', bedId);
+
+    return { error };
+  };
+
+  const getNextAvailableBedLetter = async (roomId: string): Promise<string> => {
+    const { data: existingBeds } = await supabase
+      .from('beds')
+      .select('bed_letter')
+      .eq('room_id', roomId);
+
+    const usedLetters = (existingBeds || []).map((b) => b.bed_letter);
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+    for (const letter of letters) {
+      if (!usedLetters.includes(letter)) {
+        return letter;
+      }
+    }
+
+    return 'A'; // Fallback
+  };
+
+  return { updateBedStatus, assignResident, unassignResident, createBed, deleteBed, getNextAvailableBedLetter };
 }

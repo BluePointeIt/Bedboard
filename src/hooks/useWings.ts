@@ -94,6 +94,11 @@ export function useWings() {
           { event: '*', schema: 'public', table: 'beds' },
           () => fetchWings()
         )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'rooms' },
+          () => fetchWings()
+        )
         .subscribe();
 
       return () => {
