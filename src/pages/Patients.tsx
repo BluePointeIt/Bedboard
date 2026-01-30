@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Check,
   Stethoscope,
+  Trash2,
 } from 'lucide-react';
 import { Button, Modal, CSVImport } from '../components';
 import { useResidents } from '../hooks/useResidents';
@@ -246,8 +247,10 @@ export function Patients() {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   const [_isEditing, setIsEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [availableDiagnoses, setAvailableDiagnoses] = useState<string[]>(DEFAULT_DIAGNOSES);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -261,7 +264,7 @@ export function Patients() {
   });
   const [saving, setSaving] = useState(false);
 
-  const { activeResidents, loading, createResident, bulkCreateResidents } = useResidents();
+  const { activeResidents, loading, createResident, deleteResident, bulkCreateResidents } = useResidents();
 
   const residentColumns = [
     { key: 'medical_record_number', label: 'Medical Record Number', required: true },
@@ -364,6 +367,25 @@ export function Patients() {
       });
       setIsEditing(true);
     }
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteResident = async () => {
+    if (!selectedResident) return;
+
+    setDeleting(true);
+    const { error } = await deleteResident(selectedResident.id);
+
+    if (error) {
+      console.error('Error deleting resident:', error);
+    }
+
+    setDeleting(false);
+    setShowDeleteModal(false);
+    setSelectedResident(null);
   };
 
   return (
@@ -678,6 +700,12 @@ export function Patients() {
                 <Bed className="w-4 h-4" />
                 Assign Bed
               </button>
+              <button
+                onClick={handleDeleteClick}
+                className="flex items-center justify-center gap-2 h-11 px-4 rounded-lg border border-red-200 bg-white text-red-600 font-bold text-sm hover:bg-red-50 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           </>
         )}
@@ -853,6 +881,41 @@ export function Patients() {
           columns={residentColumns}
           templateName="residents"
         />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Resident"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-[#4c739a]">
+            Are you sure you want to delete{' '}
+            <span className="font-semibold text-[#0d141b]">
+              {selectedResident?.first_name} {selectedResident?.last_name}
+            </span>
+            ? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowDeleteModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDeleteResident}
+              loading={deleting}
+              className="!bg-red-500 hover:!bg-red-600"
+            >
+              Delete Resident
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
