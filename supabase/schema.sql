@@ -130,21 +130,21 @@ CREATE POLICY "Users can view own profile" ON users
 CREATE POLICY "Users can update own profile" ON users
     FOR UPDATE USING (auth.uid() = id);
 
--- Authenticated users can view all wards
-CREATE POLICY "Authenticated users can view wards" ON wards
-    FOR SELECT TO authenticated USING (true);
+-- Anyone can view all wards
+CREATE POLICY "Anyone can view wards" ON wards
+    FOR SELECT USING (true);
 
--- Authenticated users can insert wards
-CREATE POLICY "Authenticated users can insert wards" ON wards
-    FOR INSERT TO authenticated WITH CHECK (true);
+-- Anyone can insert wards
+CREATE POLICY "Anyone can insert wards" ON wards
+    FOR INSERT WITH CHECK (true);
 
--- Authenticated users can update wards
-CREATE POLICY "Authenticated users can update wards" ON wards
-    FOR UPDATE TO authenticated USING (true);
+-- Anyone can update wards
+CREATE POLICY "Anyone can update wards" ON wards
+    FOR UPDATE USING (true);
 
--- Authenticated users can delete wards
-CREATE POLICY "Authenticated users can delete wards" ON wards
-    FOR DELETE TO authenticated USING (true);
+-- Anyone can delete wards
+CREATE POLICY "Anyone can delete wards" ON wards
+    FOR DELETE USING (true);
 
 -- Authenticated users can view all rooms
 CREATE POLICY "Authenticated users can view rooms" ON rooms

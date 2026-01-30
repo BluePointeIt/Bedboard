@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Building2, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Save, Building2, Plus, Trash2, Edit2, AlertCircle } from 'lucide-react';
 import { Button, Modal } from '../components';
 import { useWards } from '../hooks/useWards';
 import type { Ward } from '../types';
@@ -17,6 +17,7 @@ export function Settings() {
     capacity: 10,
   });
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { wards, createWard, updateWard, deleteWard } = useWards();
 
@@ -71,13 +72,21 @@ export function Settings() {
     if (!selectedWard) return;
 
     setSaving(true);
-    await updateWard(selectedWard.id, {
+    setErrorMessage(null);
+
+    const result = await updateWard(selectedWard.id, {
       name: formData.name,
       floor: formData.floor,
       capacity: formData.capacity,
     });
 
     setSaving(false);
+
+    if (result.error) {
+      setErrorMessage(result.error.message || 'Failed to update unit');
+      return;
+    }
+
     setShowEditUnitModal(false);
     setSelectedWard(null);
     resetForm();
@@ -92,9 +101,17 @@ export function Settings() {
     if (!selectedWard) return;
 
     setSaving(true);
-    await deleteWard(selectedWard.id);
+    setErrorMessage(null);
+
+    const result = await deleteWard(selectedWard.id);
 
     setSaving(false);
+
+    if (result.error) {
+      setErrorMessage(result.error.message || 'Failed to delete unit');
+      return;
+    }
+
     setShowDeleteModal(false);
     setSelectedWard(null);
   };
@@ -105,6 +122,23 @@ export function Settings() {
         <h1 className="text-2xl font-bold text-[#0d141b]">Settings</h1>
         <p className="text-[#4c739a]">Configure your facility settings</p>
       </div>
+
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-red-800 font-medium">Error</p>
+            <p className="text-red-600 text-sm">{errorMessage}</p>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="ml-auto text-red-400 hover:text-red-600"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Facility Information */}
       <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
