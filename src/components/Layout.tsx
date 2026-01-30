@@ -29,7 +29,7 @@ interface LayoutProps {
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/patients', label: 'Residents', icon: Users },
-  { path: '/beds', label: 'Rooms', icon: Bed },
+  { path: '/beds', label: 'Beds', icon: Bed },
   { path: '/reports', label: 'Reports', icon: FileText },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
