@@ -1,7 +1,5 @@
 export { Dashboard } from './Dashboard';
-export { Beds } from './Beds';
-export { Patients } from './Patients';
+export { Residents } from './Residents';
+export { Admissions } from './Admissions';
 export { Login } from './Login';
 export { Settings } from './Settings';
-export { Management } from './Management';
-export { Reports } from './Reports';

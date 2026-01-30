@@ -1,19 +1,17 @@
-import { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Layout } from './components';
-import { Dashboard, Beds, Patients, Login, Settings, Management, Reports } from './pages';
-import { DemoProvider } from './context/DemoContext';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AppLayout } from './components';
+import { Dashboard, Residents, Admissions, Login, Settings } from './pages';
 import { useAuth } from './hooks/useAuth';
 
 const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 function AuthenticatedApp() {
-  const { user, profile, loading, signIn, signUp, signOut } = useAuth();
+  const { user, loading, signIn, signUp } = useAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+      <div className="min-h-screen bg-[#f6f7f8] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
       </div>
     );
   }
@@ -24,38 +22,32 @@ function AuthenticatedApp() {
 
   return (
     <BrowserRouter>
-      <Layout onSignOut={signOut} userName={profile?.full_name || user.email || ''}>
-        <Routes>
+      <Routes>
+        <Route element={<AppLayout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/beds" element={<Beds />} />
-          <Route path="/patients" element={<Patients />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/management" element={<Management />} />
+          <Route path="/residents" element={<Residents />} />
+          <Route path="/admissions" element={<Admissions />} />
           <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </Layout>
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }
 
-function DemoApp() {
-  const [userName] = useState('Demo User');
-
+function UnauthenticatedApp() {
   return (
-    <DemoProvider>
-      <BrowserRouter>
-        <Layout userName={userName}>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/beds" element={<Beds />} />
-            <Route path="/patients" element={<Patients />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/management" element={<Management />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </Layout>
-      </BrowserRouter>
-    </DemoProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/residents" element={<Residents />} />
+          <Route path="/admissions" element={<Admissions />} />
+          <Route path="/settings" element={<Settings />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
@@ -64,7 +56,8 @@ function App() {
     return <AuthenticatedApp />;
   }
 
-  return <DemoApp />;
+  // Run without authentication when Supabase is not configured
+  return <UnauthenticatedApp />;
 }
 
 export default App;

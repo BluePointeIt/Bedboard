@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+  /* Primary Blue */
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
   --color-primary-200: #bfdbfe;
@@ -12,18 +13,34 @@
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
 
+  /* Success Green */
   --color-success-50: #f0fdf4;
-  --color-success-500: #22c55e;
+  --color-success-500: #078838;
   --color-success-600: #16a34a;
 
+  /* Warning Yellow */
   --color-warning-50: #fffbeb;
-  --color-warning-500: #f5a623;
+  --color-warning-400: #facc15;
+  --color-warning-500: #eab308;
   --color-warning-600: #d97706;
 
+  /* Danger Red */
   --color-danger-50: #fef2f2;
-  --color-danger-500: #ef4444;
+  --color-danger-500: #e73908;
   --color-danger-600: #dc2626;
 
+  /* Pink for Female */
+  --color-pink-400: #f472b6;
+  --color-pink-500: #ec4899;
+
+  /* Background colors */
+  --color-background-light: #f6f7f8;
+  --color-background-dark: #101922;
+
+  /* Slate colors for text */
+  --color-slate-muted: #4c739a;
+
+  /* Font family */
   --font-family-display: 'Manrope', sans-serif;
 }
 
@@ -60,4 +77,50 @@ body {
   height: 6px;
   width: 100%;
   border-radius: 0.75rem 0.75rem 0 0;
+}
+
+/* Status strip colors */
+.status-strip-male {
+  background-color: #137fec;
+}
+
+.status-strip-female {
+  background-color: #f472b6;
+}
+
+.status-strip-isolation {
+  background-color: #facc15;
+}
+
+.status-strip-oos {
+  background-color: #111827;
+}
+
+/* Material Symbols configuration */
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
 }

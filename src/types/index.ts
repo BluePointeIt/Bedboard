@@ -1,5 +1,64 @@
-export type BedStatus = 'available' | 'occupied' | 'cleaning' | 'maintenance';
+// Wing types
+export type WingType = 'rehab' | 'long_term' | 'hospice' | 'memory_care';
 
+export interface Wing {
+  id: string;
+  name: string;
+  wing_type: WingType;
+  icon?: string;
+  display_order: number;
+  created_at: string;
+}
+
+// Room types
+export interface Room {
+  id: string;
+  wing_id: string;
+  room_number: string;
+  created_at: string;
+  wing?: Wing;
+}
+
+// Bed types
+export type BedStatus = 'occupied' | 'vacant' | 'out_of_service';
+
+export interface Bed {
+  id: string;
+  room_id: string;
+  bed_letter: string;
+  status: BedStatus;
+  out_of_service_reason?: string;
+  created_at: string;
+  updated_at: string;
+  room?: Room;
+  resident?: Resident;
+}
+
+// Resident types
+export type PayorType = 'private' | 'medicare' | 'medicaid' | 'managed_care' | 'bed_hold' | 'hospice';
+export type IsolationType = 'respiratory' | 'contact' | 'droplet' | 'airborne';
+export type ResidentStatus = 'active' | 'discharged' | 'deceased';
+export type Gender = 'male' | 'female' | 'other';
+
+export interface Resident {
+  id: string;
+  bed_id?: string;
+  first_name: string;
+  last_name: string;
+  gender: Gender;
+  admission_date: string;
+  payor: PayorType;
+  diagnosis?: string;
+  is_isolation: boolean;
+  isolation_type?: IsolationType;
+  notes?: string;
+  status: ResidentStatus;
+  created_at: string;
+  updated_at: string;
+  bed?: Bed;
+}
+
+// User types
 export type UserRole = 'admin' | 'nurse' | 'doctor' | 'clerk';
 
 export interface User {
@@ -10,114 +69,31 @@ export interface User {
   created_at: string;
 }
 
-export interface Ward {
-  id: string;
-  name: string;
-  floor: number;
-  capacity?: number;
-  description?: string;
-  created_at: string;
-}
-
-export interface Room {
-  id: string;
-  ward_id: string;
-  room_number: string;
-  room_type: 'private' | 'semi-private' | 'ward';
-  created_at: string;
-  ward?: Ward;
-}
-
-export type PayerType = 'private' | 'medicare' | 'medicaid' | 'managed_care';
-
-export type ResidentStatus = 'active' | 'discharged' | 'deceased';
-
-export interface Patient {
-  id: string;
-  medical_record_number: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth: string;
-  gender: 'male' | 'female' | 'other';
-  payer_type?: PayerType;
-  contact_phone?: string;
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  notes?: string;
-  created_at: string;
-}
-
-export interface Resident {
-  id: string;
-  medical_record_number: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth: string;
-  gender: 'male' | 'female' | 'other';
-  payer_type: PayerType;
-  diagnoses: string[];
-  contact_phone?: string;
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  notes?: string;
-  admission_date: string;
-  discharge_date?: string;
-  status: ResidentStatus;
-  room_id?: string;
-  bed_id?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Bed {
-  id: string;
-  room_id: string;
-  bed_number: string;
-  status: BedStatus;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  room?: Room;
-  current_assignment?: BedAssignment;
-}
-
-export interface BedAssignment {
-  id: string;
-  bed_id: string;
-  patient_id: string;
-  assigned_by: string;
-  assigned_at: string;
-  discharged_at?: string;
-  is_isolation: boolean;
-  notes?: string;
-  patient?: Patient;
-  assigned_by_user?: User;
-}
-
-export interface BedWithDetails extends Bed {
-  room: Room & { ward: Ward };
-  current_assignment?: BedAssignment & { patient: Patient };
-}
-
-export interface CaseMixStats {
-  private: number;
-  medicare: number;
-  medicaid: number;
-  managed_care: number;
-}
-
+// Dashboard stats
 export interface DashboardStats {
   total_beds: number;
-  available_beds: number;
   occupied_beds: number;
-  isolation_beds: number;
-  maintenance_beds: number;
+  available_beds: number;
+  isolation_count: number;
+  out_of_service_count: number;
   occupancy_rate: number;
-  case_mix: CaseMixStats;
 }
 
+// Extended types for views
+export interface BedWithDetails extends Bed {
+  room: Room & { wing: Wing };
+  resident?: Resident;
+}
+
+export interface WingWithStats extends Wing {
+  total_beds: number;
+  occupied_beds: number;
+  occupancy_rate: number;
+}
+
+// Filter options
 export interface FilterOptions {
-  ward_id?: string;
+  wing_id?: string | null;
   status?: BedStatus;
   search?: string;
 }

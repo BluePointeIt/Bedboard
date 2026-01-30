@@ -1,45 +1,18 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { useDemoOptional } from '../context/DemoContext';
-import type { BedWithDetails, BedStatus, FilterOptions, DashboardStats } from '../types';
+import type { BedStatus, FilterOptions } from '../types';
+import type { BedWithDetails } from '../components/BedCard';
 
 const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Generate unique channel ID for each hook instance
+let bedsChannelCounter = 0;
+
 export function useBeds(filters?: FilterOptions) {
-  const demo = useDemoOptional();
   const [beds, setBeds] = useState<BedWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const filteredDemoBeds = useMemo(() => {
-    if (!demo) return [];
-    let result = demo.beds;
-
-    if (filters?.ward_id) {
-      result = result.filter(bed => bed.room?.ward?.id === filters.ward_id);
-    }
-
-    if (filters?.status) {
-      result = result.filter(bed => bed.status === filters.status);
-    }
-
-    if (filters?.search) {
-      const searchLower = filters.search.toLowerCase();
-      result = result.filter(bed => {
-        const patientName = bed.current_assignment?.patient
-          ? `${bed.current_assignment.patient.first_name} ${bed.current_assignment.patient.last_name}`
-          : '';
-        return (
-          bed.bed_number.toLowerCase().includes(searchLower) ||
-          bed.room?.room_number.toLowerCase().includes(searchLower) ||
-          bed.room?.ward?.name.toLowerCase().includes(searchLower) ||
-          patientName.toLowerCase().includes(searchLower)
-        );
-      });
-    }
-
-    return result;
-  }, [demo, filters?.ward_id, filters?.status, filters?.search]);
+  const channelIdRef = useRef(`beds-changes-${++bedsChannelCounter}-${Date.now()}`);
 
   const fetchBeds = useCallback(async () => {
     if (!supabaseConfigured) {
@@ -50,59 +23,89 @@ export function useBeds(filters?: FilterOptions) {
     setLoading(true);
     setError(null);
 
-    let query = supabase
+    // Fetch beds with room, wing, and resident data
+    const { data: bedsData, error: bedsError } = await supabase
       .from('beds')
       .select(`
         *,
-        room:rooms(
+        room:rooms!inner(
           *,
-          ward:wards(*)
-        ),
-        current_assignment:bed_assignments(
-          *,
-          patient:residents(*)
+          wing:wings!inner(*)
         )
       `)
-      .is('current_assignment.discharged_at', null)
       .order('room_id')
-      .order('bed_number');
+      .order('bed_letter');
 
-    if (filters?.ward_id) {
-      query = query.eq('room.ward_id', filters.ward_id);
+    if (bedsError) {
+      setError(bedsError.message);
+      setBeds([]);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch residents separately and join
+    const { data: residentsData } = await supabase
+      .from('residents')
+      .select('*')
+      .eq('status', 'active')
+      .not('bed_id', 'is', null);
+
+    // Create a map of bed_id to resident
+    const residentsByBedId = new Map();
+    if (residentsData) {
+      for (const resident of residentsData) {
+        if (resident.bed_id) {
+          residentsByBedId.set(resident.bed_id, resident);
+        }
+      }
+    }
+
+    // Combine beds with residents
+    let combinedData: BedWithDetails[] = (bedsData || []).map((bed: BedWithDetails) => ({
+      ...bed,
+      resident: residentsByBedId.get(bed.id) || undefined,
+    }));
+
+    // Apply filters
+    if (filters?.wing_id) {
+      combinedData = combinedData.filter((bed) => bed.room?.wing?.id === filters.wing_id);
     }
 
     if (filters?.status) {
-      query = query.eq('status', filters.status);
+      combinedData = combinedData.filter((bed) => bed.status === filters.status);
     }
 
-    const { data, error: fetchError } = await query;
-
-    if (fetchError) {
-      setError(fetchError.message);
-      setBeds([]);
-    } else {
-      let filteredData = (data || []) as BedWithDetails[];
-
-      if (filters?.search) {
-        const searchLower = filters.search.toLowerCase();
-        filteredData = filteredData.filter((bed) => {
-          const patientName = bed.current_assignment?.patient
-            ? `${bed.current_assignment.patient.first_name} ${bed.current_assignment.patient.last_name}`
-            : '';
-          return (
-            bed.bed_number.toLowerCase().includes(searchLower) ||
-            bed.room?.room_number.toLowerCase().includes(searchLower) ||
-            bed.room?.ward?.name.toLowerCase().includes(searchLower) ||
-            patientName.toLowerCase().includes(searchLower)
-          );
-        });
-      }
-
-      setBeds(filteredData);
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
+      combinedData = combinedData.filter((bed) => {
+        const residentName = bed.resident
+          ? `${bed.resident.first_name} ${bed.resident.last_name}`
+          : '';
+        return (
+          bed.bed_letter.toLowerCase().includes(searchLower) ||
+          bed.room?.room_number.toLowerCase().includes(searchLower) ||
+          bed.room?.wing?.name.toLowerCase().includes(searchLower) ||
+          residentName.toLowerCase().includes(searchLower)
+        );
+      });
     }
 
+    // Sort by wing display order, then room number, then bed letter
+    combinedData.sort((a, b) => {
+      const wingOrderA = a.room?.wing?.display_order || 0;
+      const wingOrderB = b.room?.wing?.display_order || 0;
+      if (wingOrderA !== wingOrderB) return wingOrderA - wingOrderB;
+
+      const roomA = a.room?.room_number || '';
+      const roomB = b.room?.room_number || '';
+      if (roomA !== roomB) return roomA.localeCompare(roomB);
+
+      return a.bed_letter.localeCompare(b.bed_letter);
+    });
+
+    setBeds(combinedData);
     setLoading(false);
-  }, [filters?.ward_id, filters?.status, filters?.search]);
+  }, [filters?.wing_id, filters?.status, filters?.search]);
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -113,7 +116,7 @@ export function useBeds(filters?: FilterOptions) {
     fetchBeds();
 
     const channel = supabase
-      .channel('beds-changes')
+      .channel(channelIdRef.current)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'beds' },
@@ -121,7 +124,7 @@ export function useBeds(filters?: FilterOptions) {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'bed_assignments' },
+        { event: '*', schema: 'public', table: 'residents' },
         () => fetchBeds()
       )
       .subscribe();
@@ -131,188 +134,65 @@ export function useBeds(filters?: FilterOptions) {
     };
   }, [fetchBeds]);
 
-  if (demo) {
-    return { beds: filteredDemoBeds, loading: false, error: null, refetch: () => {} };
-  }
-
   return { beds, loading, error, refetch: fetchBeds };
 }
 
-export function useBedStats() {
-  const demo = useDemoOptional();
-  const [stats, setStats] = useState<DashboardStats>({
-    total_beds: 0,
-    available_beds: 0,
-    occupied_beds: 0,
-    isolation_beds: 0,
-    maintenance_beds: 0,
-    occupancy_rate: 0,
-    case_mix: { private: 0, medicare: 0, medicaid: 0, managed_care: 0 },
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!supabaseConfigured) {
-      setLoading(false);
-      return;
-    }
-
-    async function fetchStats() {
-      const { data: bedsData, error: bedsError } = await supabase
-        .from('beds')
-        .select('id, status');
-
-      const { data: isolationData } = await supabase
-        .from('bed_assignments')
-        .select('bed_id')
-        .is('discharged_at', null)
-        .eq('is_isolation', true);
-
-      // Get case mix from active assignments with resident payer info
-      const { data: assignmentsData } = await supabase
-        .from('bed_assignments')
-        .select('patient:residents(payer_type)')
-        .is('discharged_at', null);
-
-      const caseMix = { private: 0, medicare: 0, medicaid: 0, managed_care: 0 };
-      if (assignmentsData) {
-        for (const assignment of assignmentsData) {
-          const payerType = (assignment.patient as { payer_type?: string })?.payer_type;
-          if (payerType === 'private') caseMix.private++;
-          else if (payerType === 'medicare') caseMix.medicare++;
-          else if (payerType === 'medicaid') caseMix.medicaid++;
-          else if (payerType === 'managed_care') caseMix.managed_care++;
-        }
-      }
-
-      if (!bedsError && bedsData) {
-        const total = bedsData.length;
-        const available = bedsData.filter((b) => b.status === 'available').length;
-        const occupied = bedsData.filter((b) => b.status === 'occupied').length;
-        const maintenance = bedsData.filter((b) => b.status === 'maintenance').length;
-        const isolation = isolationData?.length || 0;
-
-        setStats({
-          total_beds: total,
-          available_beds: available,
-          occupied_beds: occupied,
-          isolation_beds: isolation,
-          maintenance_beds: maintenance,
-          occupancy_rate: total > 0 ? Math.round((occupied / total) * 100) : 0,
-          case_mix: caseMix,
-        });
-      }
-
-      setLoading(false);
-    }
-
-    fetchStats();
-
-    const channel = supabase
-      .channel('beds-stats')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'beds' },
-        () => fetchStats()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  if (demo) {
-    return { stats: demo.stats, loading: false };
-  }
-
-  return { stats, loading };
-}
-
 export function useBedActions() {
-  const demo = useDemoOptional();
+  async function updateBedStatus(bedId: string, status: BedStatus, reason?: string) {
+    const updateData: { status: BedStatus; updated_at: string; out_of_service_reason?: string | null } = {
+      status,
+      updated_at: new Date().toISOString(),
+    };
 
-  async function updateBedStatus(bedId: string, status: BedStatus) {
-    if (demo) {
-      demo.updateBedStatus(bedId, status);
-      return { error: null };
+    if (status === 'out_of_service') {
+      updateData.out_of_service_reason = reason || null;
+    } else {
+      updateData.out_of_service_reason = null;
     }
 
     const { error } = await supabase
       .from('beds')
-      .update({ status, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', bedId);
 
     return { error };
   }
 
-  async function createBed(roomId: string, bedNumber: string, status: BedStatus = 'available') {
-    if (demo) {
-      demo.addBed({ room_id: roomId, bed_number: bedNumber, status });
-      return { error: null };
-    }
+  async function assignResident(bedId: string, residentId: string) {
+    // Update resident's bed_id
+    const { error: residentError } = await supabase
+      .from('residents')
+      .update({ bed_id: bedId, updated_at: new Date().toISOString() })
+      .eq('id', residentId);
 
-    const { error } = await supabase
-      .from('beds')
-      .insert({
-        room_id: roomId,
-        bed_number: bedNumber,
-        status,
-      });
+    if (residentError) return { error: residentError };
 
-    return { error };
-  }
-
-  async function assignPatient(
-    bedId: string,
-    patientId: string,
-    assignedBy?: string,
-    isIsolation: boolean = false,
-    notes?: string
-  ) {
-    if (demo) {
-      demo.assignPatient(bedId, patientId, isIsolation);
-      return { error: null };
-    }
-
-    const { error: assignError } = await supabase.from('bed_assignments').insert({
-      bed_id: bedId,
-      patient_id: patientId,
-      assigned_by: assignedBy || null,
-      is_isolation: isIsolation,
-      notes,
-    });
-
-    if (assignError) return { error: assignError };
-
-    const { error: statusError } = await supabase
+    // Update bed status to occupied
+    const { error: bedError } = await supabase
       .from('beds')
       .update({ status: 'occupied', updated_at: new Date().toISOString() })
       .eq('id', bedId);
 
-    return { error: statusError };
+    return { error: bedError };
   }
 
-  async function dischargePatient(assignmentId: string, bedId: string) {
-    if (demo) {
-      demo.dischargePatient(assignmentId, bedId);
-      return { error: null };
-    }
+  async function unassignResident(residentId: string, bedId: string) {
+    // Remove resident's bed_id
+    const { error: residentError } = await supabase
+      .from('residents')
+      .update({ bed_id: null, updated_at: new Date().toISOString() })
+      .eq('id', residentId);
 
-    const { error: dischargeError } = await supabase
-      .from('bed_assignments')
-      .update({ discharged_at: new Date().toISOString() })
-      .eq('id', assignmentId);
+    if (residentError) return { error: residentError };
 
-    if (dischargeError) return { error: dischargeError };
-
-    const { error: statusError } = await supabase
+    // Update bed status to vacant
+    const { error: bedError } = await supabase
       .from('beds')
-      .update({ status: 'cleaning', updated_at: new Date().toISOString() })
+      .update({ status: 'vacant', updated_at: new Date().toISOString() })
       .eq('id', bedId);
 
-    return { error: statusError };
+    return { error: bedError };
   }
 
-  return { updateBedStatus, createBed, assignPatient, dischargePatient };
+  return { updateBedStatus, assignResident, unassignResident };
 }
