@@ -62,10 +62,16 @@ export function Beds() {
     bed_number: '',
     status: 'available' as BedStatus,
   });
+  const [showAddRoomModal, setShowAddRoomModal] = useState(false);
+  const [roomFormData, setRoomFormData] = useState({
+    ward_id: '',
+    room_number: '',
+    room_type: 'ward' as 'private' | 'semi-private' | 'ward',
+  });
 
   const { beds, loading, refetch } = useBeds(filters);
   const { wards } = useWards();
-  const { rooms } = useRooms();
+  const { rooms, createRoom, refetch: refetchRooms } = useRooms();
   const { residents: unassignedResidents } = useUnassignedResidents();
   const { updateBedStatus, createBed, assignPatient, dischargePatient } = useBedActions();
 
@@ -114,6 +120,22 @@ export function Beds() {
     refetch();
   };
 
+  const handleAddRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roomFormData.ward_id || !roomFormData.room_number) return;
+
+    setActionLoading(true);
+    await createRoom({
+      ward_id: roomFormData.ward_id,
+      room_number: roomFormData.room_number,
+      room_type: roomFormData.room_type,
+    });
+    setActionLoading(false);
+    setShowAddRoomModal(false);
+    setRoomFormData({ ward_id: '', room_number: '', room_type: 'ward' });
+    refetchRooms();
+  };
+
   // Group beds by ward
   const bedsByWard = beds.reduce((acc, bed) => {
     const wardName = bed.room?.ward?.name || 'Unknown';
@@ -139,13 +161,22 @@ export function Beds() {
             <h1 className="text-2xl font-bold text-[#0d141b]">Bed Management</h1>
             <p className="text-[#4c739a]">View and manage all facility beds</p>
           </div>
-          <button
-            onClick={() => setShowAddBedModal(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#137fec] text-white font-medium text-sm hover:bg-[#1171d4] transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Bed
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowAddRoomModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#e7edf3] bg-white text-[#0d141b] font-medium text-sm hover:bg-[#f6f7f8] transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Room
+            </button>
+            <button
+              onClick={() => setShowAddBedModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#137fec] text-white font-medium text-sm hover:bg-[#1171d4] transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Bed
+            </button>
+          </div>
         </div>
 
         <SearchFilter
@@ -606,6 +637,87 @@ export function Beds() {
               loading={actionLoading}
             >
               Add Bed
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Room Modal */}
+      <Modal
+        isOpen={showAddRoomModal}
+        onClose={() => {
+          setShowAddRoomModal(false);
+          setRoomFormData({ ward_id: '', room_number: '', room_type: 'ward' });
+        }}
+        title="Add New Room"
+        size="md"
+      >
+        <form onSubmit={handleAddRoom} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#0d141b] mb-1">
+              Select Unit *
+            </label>
+            <select
+              required
+              value={roomFormData.ward_id}
+              onChange={(e) => setRoomFormData({ ...roomFormData, ward_id: e.target.value })}
+              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+            >
+              <option value="">Choose a unit...</option>
+              {wards.map((ward) => (
+                <option key={ward.id} value={ward.id}>
+                  {ward.name} - Floor {ward.floor}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0d141b] mb-1">
+              Room Number *
+            </label>
+            <input
+              type="text"
+              required
+              value={roomFormData.room_number}
+              onChange={(e) => setRoomFormData({ ...roomFormData, room_number: e.target.value })}
+              placeholder="e.g., 101, 102, A1"
+              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0d141b] mb-1">
+              Room Type
+            </label>
+            <select
+              value={roomFormData.room_type}
+              onChange={(e) => setRoomFormData({ ...roomFormData, room_type: e.target.value as 'private' | 'semi-private' | 'ward' })}
+              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+            >
+              <option value="ward">Ward (4+ beds)</option>
+              <option value="semi-private">Semi-Private (2 beds)</option>
+              <option value="private">Private (1 bed)</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowAddRoomModal(false);
+                setRoomFormData({ ward_id: '', room_number: '', room_type: 'ward' });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!roomFormData.ward_id || !roomFormData.room_number}
+              loading={actionLoading}
+            >
+              Add Room
             </Button>
           </div>
         </form>
