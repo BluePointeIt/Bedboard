@@ -3,6 +3,7 @@ import { Button, Icon, Modal } from '../components';
 import { useWings } from '../hooks/useWings';
 import { useRooms, useRoomActions } from '../hooks/useRooms';
 import { useBedActions } from '../hooks/useBeds';
+import { supabase } from '../lib/supabase';
 import type { WingType, WingWithStats, RoomWithBeds, Room, Bed } from '../types';
 
 const WING_TYPES: { value: WingType; label: string }[] = [
@@ -42,6 +43,7 @@ export function Settings() {
   // Budget settings state
   const [payorRates, setPayorRates] = useState<PayorRates>(DEFAULT_PAYOR_RATES);
   const [budgetSaved, setBudgetSaved] = useState(false);
+  const [budgetLoading, setBudgetLoading] = useState(true);
 
   const { wings, loading: wingsLoading, updateWing, refetch: refetchWings } = useWings();
   const { rooms, loading: roomsLoading, refetch: refetchRooms } = useRooms();
@@ -96,21 +98,30 @@ export function Settings() {
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Load facility name and budget settings from localStorage
+  // Load facility name from localStorage
   useEffect(() => {
     const savedFacilityName = localStorage.getItem('facilityName');
     if (savedFacilityName) {
       setFacilityName(savedFacilityName);
     }
+  }, []);
 
-    const savedPayorRates = localStorage.getItem('payorRates');
-    if (savedPayorRates) {
-      try {
-        setPayorRates(JSON.parse(savedPayorRates));
-      } catch {
-        // Use defaults if parsing fails
+  // Load case-mix settings from Supabase
+  useEffect(() => {
+    async function loadCaseMix() {
+      setBudgetLoading(true);
+      const { data, error } = await supabase
+        .from('facility_settings')
+        .select('setting_value')
+        .eq('setting_key', 'case_mix')
+        .single();
+
+      if (!error && data?.setting_value) {
+        setPayorRates(data.setting_value as PayorRates);
       }
+      setBudgetLoading(false);
     }
+    loadCaseMix();
   }, []);
 
   // Group rooms by wing
@@ -136,11 +147,22 @@ export function Settings() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleSaveBudget = () => {
-    localStorage.setItem('occupancyTarget', String(calculatedOccupancyTarget));
-    localStorage.setItem('payorRates', JSON.stringify(payorRates));
-    setBudgetSaved(true);
-    setTimeout(() => setBudgetSaved(false), 2000);
+  const handleSaveBudget = async () => {
+    const { error } = await supabase
+      .from('facility_settings')
+      .upsert({
+        setting_key: 'case_mix',
+        setting_value: payorRates,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'setting_key' });
+
+    if (!error) {
+      // Also save to localStorage for quick access by other components
+      localStorage.setItem('occupancyTarget', String(calculatedOccupancyTarget));
+      localStorage.setItem('payorRates', JSON.stringify(payorRates));
+      setBudgetSaved(true);
+      setTimeout(() => setBudgetSaved(false), 2000);
+    }
   };
 
   const updatePayorRate = (payor: keyof PayorRates, value: string) => {
@@ -471,6 +493,12 @@ export function Settings() {
         </div>
 
         {/* Case-Mix (Budgeted Residents by Payor) */}
+        {budgetLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
+          </div>
+        ) : (
+          <>
         <div>
           <label className="block text-sm font-medium text-[#0d141b] mb-3">
             Case-Mix <span className="font-normal text-[#4c739a]">(Budgeted Residents)</span>
@@ -579,6 +607,8 @@ export function Settings() {
             {budgetSaved ? 'Saved!' : 'Save Budget Settings'}
           </Button>
         </div>
+          </>
+        )}
       </div>
 
       {/* Facility Wings with Rooms and Beds */}
