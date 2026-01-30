@@ -98,6 +98,20 @@ export function Settings() {
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Import modal state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<Array<{
+    room_number: string;
+    wing_name: string;
+    beds: string;
+    shared_bathroom: string;
+    bathroom_group: string;
+  }>>([]);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+
   // Load facility name from localStorage
   useEffect(() => {
     const savedFacilityName = localStorage.getItem('facilityName');
@@ -168,6 +182,145 @@ export function Settings() {
   const updatePayorRate = (payor: keyof PayorRates, value: string) => {
     const numValue = value === '' ? 0 : Number(value);
     setPayorRates((prev) => ({ ...prev, [payor]: numValue }));
+  };
+
+  // Import handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFile(file);
+    setImportError(null);
+    setImportSuccess(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+
+        if (lines.length < 2) {
+          setImportError('File must contain a header row and at least one data row');
+          return;
+        }
+
+        // Parse CSV (expecting: room_number, wing_name, beds, shared_bathroom, bathroom_group)
+        const rows = lines.slice(1).map(line => {
+          const values = line.split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+          return {
+            room_number: values[0] || '',
+            wing_name: values[1] || '',
+            beds: values[2] || 'A',
+            shared_bathroom: values[3] || 'no',
+            bathroom_group: values[4] || '',
+          };
+        }).filter(row => row.room_number && row.wing_name);
+
+        if (rows.length === 0) {
+          setImportError('No valid rows found in file');
+          return;
+        }
+
+        setImportPreview(rows);
+      } catch {
+        setImportError('Failed to parse file. Please check the format.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImport = async () => {
+    if (importPreview.length === 0) return;
+
+    setImporting(true);
+    setImportError(null);
+
+    try {
+      // Group rows by bathroom_group for shared bathroom logic
+      const bathroomGroups = new Map<string, string>();
+      let created = 0;
+      let skipped = 0;
+
+      for (const row of importPreview) {
+        // Find the wing by name
+        const wing = wings.find(w =>
+          w.name.toLowerCase() === row.wing_name.toLowerCase()
+        );
+
+        if (!wing) {
+          skipped++;
+          continue;
+        }
+
+        // Check if room already exists
+        const existingRoom = rooms.find(r =>
+          r.wing_id === wing.id && r.room_number === row.room_number
+        );
+
+        if (existingRoom) {
+          skipped++;
+          continue;
+        }
+
+        // Handle shared bathroom group
+        let sharedBathroomGroupId: string | null = null;
+        const hasSharedBathroom = row.shared_bathroom.toLowerCase() === 'yes' ||
+                                   row.shared_bathroom.toLowerCase() === 'true' ||
+                                   row.shared_bathroom === '1';
+
+        if (hasSharedBathroom && row.bathroom_group) {
+          if (!bathroomGroups.has(row.bathroom_group)) {
+            bathroomGroups.set(row.bathroom_group, crypto.randomUUID());
+          }
+          sharedBathroomGroupId = bathroomGroups.get(row.bathroom_group) || null;
+        }
+
+        // Create room
+        const { data: newRoom, error: roomError } = await createRoom({
+          wing_id: wing.id,
+          room_number: row.room_number,
+          has_shared_bathroom: hasSharedBathroom,
+          shared_bathroom_group_id: sharedBathroomGroupId,
+        });
+
+        if (roomError || !newRoom) {
+          skipped++;
+          continue;
+        }
+
+        // Create beds
+        const bedLetters = row.beds.split(/[,\s]+/).map(b => b.trim().toUpperCase()).filter(b => b);
+        for (const letter of bedLetters) {
+          await createBed(newRoom.id, letter);
+        }
+
+        created++;
+      }
+
+      setImportSuccess(`Successfully imported ${created} rooms. ${skipped > 0 ? `${skipped} skipped (already exist or invalid wing).` : ''}`);
+      refetchRooms();
+      refetchWings();
+    } catch {
+      setImportError('An error occurred during import');
+    }
+
+    setImporting(false);
+  };
+
+  const downloadTemplate = () => {
+    const template = `room_number,wing_name,beds,shared_bathroom,bathroom_group
+101,North Wing,A B,no,
+102,North Wing,A B,yes,group1
+103,North Wing,A,yes,group1
+201,East Wing,A B C,no,`;
+
+    const blob = new Blob([template], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'room_bed_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const toggleWingExpanded = (wingId: string) => {
@@ -613,14 +766,20 @@ export function Settings() {
 
       {/* Facility Wings with Rooms and Beds */}
       <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
-            <Icon name="grid_view" size={20} className="text-primary-500" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
+              <Icon name="grid_view" size={20} className="text-primary-500" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-[#0d141b]">Facility Wings</h2>
+              <p className="text-sm text-[#4c739a]">Manage wings, rooms, and beds</p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-semibold text-[#0d141b]">Facility Wings</h2>
-            <p className="text-sm text-[#4c739a]">Manage wings, rooms, and beds</p>
-          </div>
+          <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+            <Icon name="upload_file" size={16} className="mr-2" />
+            Import Rooms
+          </Button>
         </div>
 
         {loading ? (
@@ -1233,6 +1392,128 @@ export function Settings() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Import Rooms Modal */}
+      <Modal
+        isOpen={showImportModal}
+        onClose={() => {
+          setShowImportModal(false);
+          setImportFile(null);
+          setImportPreview([]);
+          setImportError(null);
+          setImportSuccess(null);
+        }}
+        title="Import Rooms & Beds"
+        size="lg"
+      >
+        <div className="space-y-4">
+          {importError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {importError}
+            </div>
+          )}
+
+          {importSuccess && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+              {importSuccess}
+            </div>
+          )}
+
+          <div className="p-4 bg-[#f6f7f8] rounded-lg border border-[#e7edf3]">
+            <p className="text-sm font-medium text-[#0d141b] mb-2">CSV File Format</p>
+            <p className="text-xs text-[#4c739a] mb-3">
+              Upload a CSV file with columns: room_number, wing_name, beds, shared_bathroom, bathroom_group
+            </p>
+            <div className="text-xs font-mono bg-white p-2 rounded border border-[#e7edf3] overflow-x-auto">
+              <div className="text-[#4c739a]">room_number,wing_name,beds,shared_bathroom,bathroom_group</div>
+              <div>101,North Wing,A B,no,</div>
+              <div>102,North Wing,A B,yes,group1</div>
+              <div>103,North Wing,A,yes,group1</div>
+            </div>
+            <button
+              onClick={downloadTemplate}
+              className="mt-3 text-xs text-primary-500 hover:text-primary-600 flex items-center gap-1"
+            >
+              <Icon name="download" size={14} />
+              Download Template
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0d141b] mb-2">Select File</label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileSelect}
+              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+            />
+            {importFile && (
+              <p className="text-xs text-[#4c739a] mt-1">
+                Selected: {importFile.name}
+              </p>
+            )}
+          </div>
+
+          {importPreview.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-[#0d141b] mb-2">
+                Preview ({importPreview.length} rows)
+              </p>
+              <div className="max-h-48 overflow-auto border border-[#e7edf3] rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="bg-[#f6f7f8] sticky top-0">
+                    <tr>
+                      <th className="px-2 py-1 text-left text-[#4c739a]">Room</th>
+                      <th className="px-2 py-1 text-left text-[#4c739a]">Wing</th>
+                      <th className="px-2 py-1 text-left text-[#4c739a]">Beds</th>
+                      <th className="px-2 py-1 text-left text-[#4c739a]">Shared Bath</th>
+                      <th className="px-2 py-1 text-left text-[#4c739a]">Group</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importPreview.slice(0, 20).map((row, i) => (
+                      <tr key={i} className="border-t border-[#e7edf3]">
+                        <td className="px-2 py-1">{row.room_number}</td>
+                        <td className="px-2 py-1">{row.wing_name}</td>
+                        <td className="px-2 py-1">{row.beds}</td>
+                        <td className="px-2 py-1">{row.shared_bathroom}</td>
+                        <td className="px-2 py-1">{row.bathroom_group || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {importPreview.length > 20 && (
+                  <p className="text-xs text-[#4c739a] p-2 text-center bg-[#f6f7f8]">
+                    ... and {importPreview.length - 20} more rows
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-[#e7edf3]">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowImportModal(false);
+                setImportFile(null);
+                setImportPreview([]);
+                setImportError(null);
+                setImportSuccess(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImport}
+              disabled={importPreview.length === 0 || importing}
+              loading={importing}
+            >
+              Import {importPreview.length > 0 ? `${importPreview.length} Rooms` : ''}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
