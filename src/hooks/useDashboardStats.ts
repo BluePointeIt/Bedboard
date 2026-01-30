@@ -15,6 +15,7 @@ interface BedWithRoom {
 
 interface ResidentWithBed {
   id: string;
+  gender: string;
   is_isolation: boolean;
   bed: { id: string; room: { wing_id: string } };
 }
@@ -24,6 +25,8 @@ export function useDashboardStats(wingId?: string | null) {
     total_beds: 0,
     occupied_beds: 0,
     available_beds: 0,
+    male_occupied: 0,
+    female_occupied: 0,
     isolation_count: 0,
     out_of_service_count: 0,
     occupancy_rate: 0,
@@ -63,11 +66,12 @@ export function useDashboardStats(wingId?: string | null) {
       filteredBeds = filteredBeds.filter((bed) => bed.room?.wing_id === wingId);
     }
 
-    // Get isolation count from residents
-    const { data: isolationData } = await supabase
+    // Get all active residents with beds for gender and isolation counts
+    const { data: residentsData } = await supabase
       .from('residents')
       .select(`
         id,
+        gender,
         is_isolation,
         bed:beds!inner(
           id,
@@ -76,18 +80,22 @@ export function useDashboardStats(wingId?: string | null) {
           )
         )
       `)
-      .eq('status', 'active')
-      .eq('is_isolation', true);
+      .eq('status', 'active');
 
-    // Filter isolation residents by wing if specified
+    // Filter residents by wing if specified and calculate counts
+    let maleOccupied = 0;
+    let femaleOccupied = 0;
     let isolationCount = 0;
-    if (isolationData) {
-      const isolationResidents = isolationData as unknown as ResidentWithBed[];
+
+    if (residentsData) {
+      let filteredResidents = residentsData as unknown as ResidentWithBed[];
       if (wingId) {
-        isolationCount = isolationResidents.filter((r) => r.bed?.room?.wing_id === wingId).length;
-      } else {
-        isolationCount = isolationResidents.length;
+        filteredResidents = filteredResidents.filter((r) => r.bed?.room?.wing_id === wingId);
       }
+
+      maleOccupied = filteredResidents.filter((r) => r.gender === 'male').length;
+      femaleOccupied = filteredResidents.filter((r) => r.gender === 'female').length;
+      isolationCount = filteredResidents.filter((r) => r.is_isolation).length;
     }
 
     // Calculate stats
@@ -102,6 +110,8 @@ export function useDashboardStats(wingId?: string | null) {
       total_beds: totalBeds,
       occupied_beds: occupiedBeds,
       available_beds: vacantBeds,
+      male_occupied: maleOccupied,
+      female_occupied: femaleOccupied,
       isolation_count: isolationCount,
       out_of_service_count: outOfServiceBeds,
       occupancy_rate: Math.round(occupancyRate * 10) / 10,

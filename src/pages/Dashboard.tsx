@@ -87,28 +87,40 @@ export function Dashboard() {
       {/* Dashboard Stats */}
       <div className="flex flex-wrap gap-4">
         <StatsCard
-          title="Occupancy Rate"
+          title="% Occupied"
           value={`${stats.occupancy_rate}%`}
-          change={stats.occupancy_rate >= 85 ? '+1.2%' : '-0.8%'}
-          changeType={stats.occupancy_rate >= 85 ? 'positive' : 'negative'}
+          change={stats.occupancy_rate >= 90 ? 'High' : stats.occupancy_rate >= 70 ? 'Normal' : 'Low'}
+          changeType={stats.occupancy_rate >= 90 ? 'negative' : stats.occupancy_rate >= 70 ? 'neutral' : 'positive'}
+        />
+        <StatsCard
+          title="Male Beds Occupied"
+          value={stats.male_occupied}
+          change={`${stats.occupied_beds > 0 ? Math.round((stats.male_occupied / stats.occupied_beds) * 100) : 0}%`}
+          variant="male"
+        />
+        <StatsCard
+          title="Female Beds Occupied"
+          value={stats.female_occupied}
+          change={`${stats.occupied_beds > 0 ? Math.round((stats.female_occupied / stats.occupied_beds) * 100) : 0}%`}
+          variant="female"
+        />
+        <StatsCard
+          title="Isolation Beds Occupied"
+          value={stats.isolation_count}
+          change="Active"
+          variant="isolation"
         />
         <StatsCard
           title="Available Beds"
           value={stats.available_beds}
-          change={stats.available_beds > 5 ? `+${Math.min(stats.available_beds, 3)}` : `-${Math.abs(5 - stats.available_beds)}`}
+          change={stats.available_beds > 5 ? 'Good' : 'Low'}
           changeType={stats.available_beds > 5 ? 'positive' : 'negative'}
-        />
-        <StatsCard
-          title="Isolation Units"
-          value={stats.isolation_count}
-          change="Stable"
-          changeType="neutral"
         />
         <StatsCard
           title="Out of Service"
           value={stats.out_of_service_count}
           change="Maintenance"
-          changeType="neutral"
+          variant="outOfService"
         />
       </div>
 

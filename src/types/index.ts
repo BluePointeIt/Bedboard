@@ -74,6 +74,8 @@ export interface DashboardStats {
   total_beds: number;
   occupied_beds: number;
   available_beds: number;
+  male_occupied: number;
+  female_occupied: number;
   isolation_count: number;
   out_of_service_count: number;
   occupancy_rate: number;
