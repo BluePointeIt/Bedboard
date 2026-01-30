@@ -246,10 +246,10 @@ function DiagnosisDropdown({
 export function Patients() {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
-  const [_isEditing, setIsEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [availableDiagnoses, setAvailableDiagnoses] = useState<string[]>(DEFAULT_DIAGNOSES);
   const [formData, setFormData] = useState({
@@ -264,7 +264,7 @@ export function Patients() {
   });
   const [saving, setSaving] = useState(false);
 
-  const { activeResidents, loading, createResident, deleteResident, bulkCreateResidents } = useResidents();
+  const { activeResidents, loading, createResident, updateResident, deleteResident, bulkCreateResidents } = useResidents();
 
   const residentColumns = [
     { key: 'medical_record_number', label: 'Medical Record Number', required: true },
@@ -365,8 +365,36 @@ export function Patients() {
         notes: selectedResident.notes || '',
         diagnoses: selectedResident.diagnoses || [],
       });
-      setIsEditing(true);
+      setShowEditModal(true);
     }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedResident) return;
+
+    setSaving(true);
+
+    const { error } = await updateResident({
+      id: selectedResident.id,
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      date_of_birth: formData.date_of_birth,
+      admission_date: formData.admission_date,
+      gender: formData.gender,
+      payer_type: formData.payer_type,
+      diagnoses: formData.diagnoses,
+      notes: formData.notes || undefined,
+    });
+
+    if (error) {
+      console.error('Error updating resident:', error);
+    }
+
+    setSaving(false);
+    setShowEditModal(false);
+    setSelectedResident(null);
+    resetForm();
   };
 
   const handleDeleteClick = () => {
@@ -529,7 +557,6 @@ export function Patients() {
           className="fixed inset-0 bg-slate-900/10 backdrop-blur-[1px] z-40"
           onClick={() => {
             setSelectedResident(null);
-            setIsEditing(false);
           }}
         />
       )}
@@ -565,7 +592,6 @@ export function Patients() {
                   <button
                     onClick={() => {
                       setSelectedResident(null);
-                      setIsEditing(false);
                     }}
                     className="text-[#4c739a] hover:text-[#0d141b] transition-colors"
                   >
@@ -864,6 +890,164 @@ export function Patients() {
             </Button>
             <Button type="submit" loading={saving}>
               Add Resident
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Resident Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          resetForm();
+        }}
+        title="Edit Resident"
+        size="lg"
+      >
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#0d141b] mb-1">
+                First Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.first_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, first_name: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0d141b] mb-1">
+                Last Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.last_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, last_name: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#0d141b] mb-1">
+                Date of Birth *
+              </label>
+              <input
+                type="date"
+                required
+                value={formData.date_of_birth}
+                onChange={(e) =>
+                  setFormData({ ...formData, date_of_birth: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0d141b] mb-1">
+                Date of Admission *
+              </label>
+              <input
+                type="date"
+                required
+                value={formData.admission_date}
+                onChange={(e) =>
+                  setFormData({ ...formData, admission_date: e.target.value })
+                }
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#0d141b] mb-1">
+                Gender *
+              </label>
+              <select
+                required
+                value={formData.gender}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    gender: e.target.value as 'male' | 'female' | 'other',
+                  })
+                }
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#0d141b] mb-1">
+                Payer Type *
+              </label>
+              <select
+                required
+                value={formData.payer_type}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    payer_type: e.target.value as PayerType,
+                  })
+                }
+                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+              >
+                <option value="private">Private</option>
+                <option value="medicare">Medicare</option>
+                <option value="medicaid">Medicaid</option>
+                <option value="managed_care">Managed Care</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Diagnosis Dropdown */}
+          <DiagnosisDropdown
+            selectedDiagnoses={formData.diagnoses}
+            onSelectionChange={(diagnoses) => setFormData({ ...formData, diagnoses })}
+            availableDiagnoses={availableDiagnoses}
+            onAddCustom={handleAddCustomDiagnosis}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-[#0d141b] mb-1">
+              Additional Medical Notes
+            </label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
+              rows={3}
+              placeholder="Any allergies, special care instructions, or other notes..."
+              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec] resize-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowEditModal(false);
+                resetForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving}>
+              Save Changes
             </Button>
           </div>
         </form>
