@@ -17,9 +17,32 @@ interface BathroomGroup {
   rooms: Room[];
 }
 
+interface PayorRates {
+  private: number;
+  medicare: number;
+  medicaid: number;
+  managed_care: number;
+  hospice: number;
+  other: number;
+}
+
+const DEFAULT_PAYOR_RATES: PayorRates = {
+  private: 0,
+  medicare: 0,
+  medicaid: 0,
+  managed_care: 0,
+  hospice: 0,
+  other: 0,
+};
+
 export function Settings() {
   const [facilityName, setFacilityName] = useState('MediBed Pro Facility');
   const [saved, setSaved] = useState(false);
+
+  // Budget settings state
+  const [occupancyTarget, setOccupancyTarget] = useState(85);
+  const [payorRates, setPayorRates] = useState<PayorRates>(DEFAULT_PAYOR_RATES);
+  const [budgetSaved, setBudgetSaved] = useState(false);
 
   const { wings, loading: wingsLoading, updateWing, refetch: refetchWings } = useWings();
   const { rooms, loading: roomsLoading, refetch: refetchRooms } = useRooms();
@@ -74,11 +97,25 @@ export function Settings() {
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Load facility name from localStorage
+  // Load facility name and budget settings from localStorage
   useEffect(() => {
     const savedFacilityName = localStorage.getItem('facilityName');
     if (savedFacilityName) {
       setFacilityName(savedFacilityName);
+    }
+
+    const savedOccupancyTarget = localStorage.getItem('occupancyTarget');
+    if (savedOccupancyTarget) {
+      setOccupancyTarget(Number(savedOccupancyTarget));
+    }
+
+    const savedPayorRates = localStorage.getItem('payorRates');
+    if (savedPayorRates) {
+      try {
+        setPayorRates(JSON.parse(savedPayorRates));
+      } catch {
+        // Use defaults if parsing fails
+      }
     }
   }, []);
 
@@ -99,6 +136,18 @@ export function Settings() {
     localStorage.setItem('facilityName', facilityName);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleSaveBudget = () => {
+    localStorage.setItem('occupancyTarget', String(occupancyTarget));
+    localStorage.setItem('payorRates', JSON.stringify(payorRates));
+    setBudgetSaved(true);
+    setTimeout(() => setBudgetSaved(false), 2000);
+  };
+
+  const updatePayorRate = (payor: keyof PayorRates, value: string) => {
+    const numValue = value === '' ? 0 : Number(value);
+    setPayorRates((prev) => ({ ...prev, [payor]: numValue }));
   };
 
   const toggleWingExpanded = (wingId: string) => {
@@ -407,6 +456,143 @@ export function Settings() {
           <Button onClick={handleSaveFacility}>
             <Icon name="save" size={16} className="mr-2" />
             {saved ? 'Saved!' : 'Save Facility Name'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Budget Settings */}
+      <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+            <Icon name="payments" size={20} className="text-green-600" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-[#0d141b]">Budget Settings</h2>
+            <p className="text-sm text-[#4c739a]">Configure occupancy targets and payor rates</p>
+          </div>
+        </div>
+
+        {/* Occupancy Target */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-[#0d141b] mb-2">
+            Facility Occupancy Target
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={occupancyTarget}
+              onChange={(e) => setOccupancyTarget(Number(e.target.value))}
+              className="w-24 px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+            />
+            <span className="text-lg font-medium text-[#4c739a]">%</span>
+            <div className="flex-1 h-3 bg-[#e7edf3] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 transition-all duration-300"
+                style={{ width: `${Math.min(occupancyTarget, 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Payor Source Monthly Rates */}
+        <div>
+          <label className="block text-sm font-medium text-[#0d141b] mb-3">
+            Payor Source Monthly Rates
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs text-[#4c739a] mb-1">Private</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={payorRates.private || ''}
+                  onChange={(e) => updatePayorRate('private', e.target.value)}
+                  placeholder="0"
+                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-[#4c739a] mb-1">Medicare</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={payorRates.medicare || ''}
+                  onChange={(e) => updatePayorRate('medicare', e.target.value)}
+                  placeholder="0"
+                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-[#4c739a] mb-1">Medicaid</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={payorRates.medicaid || ''}
+                  onChange={(e) => updatePayorRate('medicaid', e.target.value)}
+                  placeholder="0"
+                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-[#4c739a] mb-1">Managed Care</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={payorRates.managed_care || ''}
+                  onChange={(e) => updatePayorRate('managed_care', e.target.value)}
+                  placeholder="0"
+                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-[#4c739a] mb-1">Hospice</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={payorRates.hospice || ''}
+                  onChange={(e) => updatePayorRate('hospice', e.target.value)}
+                  placeholder="0"
+                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-[#4c739a] mb-1">Other</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c739a]">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={payorRates.other || ''}
+                  onChange={(e) => updatePayorRate('other', e.target.value)}
+                  placeholder="0"
+                  className="w-full pl-7 pr-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <Button onClick={handleSaveBudget}>
+            <Icon name="save" size={16} className="mr-2" />
+            {budgetSaved ? 'Saved!' : 'Save Budget Settings'}
           </Button>
         </div>
       </div>
