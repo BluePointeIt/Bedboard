@@ -14,7 +14,7 @@ import {
 import { BedCard, SearchFilter, Modal, Button } from '../components';
 import { useBeds, useBedActions } from '../hooks/useBeds';
 import { useWards } from '../hooks/useWards';
-import { useUnassignedPatients } from '../hooks/usePatients';
+import { useUnassignedResidents } from '../hooks/useResidents';
 import { cn, formatDate } from '../lib/utils';
 import type { BedWithDetails, BedStatus, FilterOptions } from '../types';
 
@@ -58,7 +58,7 @@ export function Beds() {
 
   const { beds, loading } = useBeds(filters);
   const { wards } = useWards();
-  const { patients: unassignedPatients } = useUnassignedPatients();
+  const { residents: unassignedResidents } = useUnassignedResidents();
   const { updateBedStatus, assignPatient, dischargePatient } = useBedActions();
 
   const handleStatusChange = async (bedId: string, status: BedStatus) => {
@@ -458,9 +458,9 @@ export function Beds() {
               className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#137fec]"
             >
               <option value="">Choose a resident...</option>
-              {unassignedPatients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.first_name} {patient.last_name} (MRN: {patient.medical_record_number})
+              {unassignedResidents.map((resident) => (
+                <option key={resident.id} value={resident.id}>
+                  {resident.first_name} {resident.last_name} (MRN: {resident.medical_record_number})
                 </option>
               ))}
             </select>
