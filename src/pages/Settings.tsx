@@ -19,7 +19,7 @@ export function Settings() {
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { wards, createWard, updateWard, deleteWard } = useWards();
+  const { wards, createWard, updateWard, deleteWard, refetch } = useWards();
 
   // Load facility name from localStorage
   useEffect(() => {
@@ -41,16 +41,24 @@ export function Settings() {
   const handleAddUnit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setErrorMessage(null);
 
-    await createWard({
+    const result = await createWard({
       name: formData.name,
       floor: formData.floor,
       capacity: formData.capacity,
     });
 
     setSaving(false);
+
+    if (result.error) {
+      setErrorMessage(result.error.message || 'Failed to add unit');
+      return;
+    }
+
     setShowAddUnitModal(false);
     setFormData({ name: '', floor: 1, capacity: 10 });
+    refetch();
   };
 
   const resetForm = () => {
