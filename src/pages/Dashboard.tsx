@@ -1,11 +1,13 @@
 import { useOutletContext } from 'react-router-dom';
-import { BedCard, BedGrid, FilterLegend, StatsCard, Modal, Button } from '../components';
+import { BedCard, BedGrid, FilterLegend, StatsCard, Modal, Button, Icon } from '../components';
 import { useBeds, useBedActions } from '../hooks/useBeds';
+import type { GenderCompatibilityResult } from '../hooks/useBeds';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useUnassignedResidents } from '../hooks/useResidents';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { BedWithDetails } from '../components/BedCard';
 import type { LayoutContext } from '../components/AppLayout';
+import type { Gender } from '../types';
 
 export function Dashboard() {
   const { searchQuery, selectedWingId, wings } = useOutletContext<LayoutContext>();
@@ -17,26 +19,74 @@ export function Dashboard() {
   const [selectedTargetBedId, setSelectedTargetBedId] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Gender compatibility state
+  const [genderCompatibility, setGenderCompatibility] = useState<GenderCompatibilityResult | null>(null);
+  const [requiredGenderForBed, setRequiredGenderForBed] = useState<Gender | null>(null);
+  const [moveTargetCompatibility, setMoveTargetCompatibility] = useState<GenderCompatibilityResult | null>(null);
+
   const { beds, loading } = useBeds({
     wing_id: selectedWingId,
     search: searchQuery || undefined,
   });
   const { stats } = useDashboardStats(selectedWingId);
   const { residents: unassignedResidents } = useUnassignedResidents();
-  const { updateBedStatus, assignResident, unassignResident } = useBedActions();
+  const { updateBedStatus, assignResident, unassignResident, checkGenderCompatibility, getRequiredGenderForBed } = useBedActions();
 
   // Get the selected wing name for the header
   const selectedWing = wings.find((w) => w.id === selectedWingId);
   const headerTitle = selectedWing ? `Unit Overview: ${selectedWing.name}` : 'Unit Overview: All Wings';
 
+  // Check required gender when opening assign modal
+  useEffect(() => {
+    if (showAssignModal && selectedBed) {
+      getRequiredGenderForBed(selectedBed.id).then(setRequiredGenderForBed);
+    } else {
+      setRequiredGenderForBed(null);
+      setGenderCompatibility(null);
+    }
+  }, [showAssignModal, selectedBed]);
+
+  // Check gender compatibility when a resident is selected for assignment
+  useEffect(() => {
+    if (selectedResidentId && selectedBed) {
+      const resident = unassignedResidents.find((r) => r.id === selectedResidentId);
+      if (resident) {
+        checkGenderCompatibility(selectedBed.id, resident.gender).then(setGenderCompatibility);
+      }
+    } else {
+      setGenderCompatibility(null);
+    }
+  }, [selectedResidentId, selectedBed, unassignedResidents]);
+
+  // Check gender compatibility when a target bed is selected for move
+  useEffect(() => {
+    if (selectedTargetBedId && selectedBed?.resident) {
+      checkGenderCompatibility(selectedTargetBedId, selectedBed.resident.gender).then(setMoveTargetCompatibility);
+    } else {
+      setMoveTargetCompatibility(null);
+    }
+  }, [selectedTargetBedId, selectedBed]);
+
   const handleAssignResident = async () => {
     if (!selectedBed || !selectedResidentId) return;
+
+    // Final compatibility check before assigning
+    const resident = unassignedResidents.find((r) => r.id === selectedResidentId);
+    if (resident) {
+      const compatibility = await checkGenderCompatibility(selectedBed.id, resident.gender);
+      if (!compatibility.compatible) {
+        setGenderCompatibility(compatibility);
+        return;
+      }
+    }
+
     setActionLoading(true);
     await assignResident(selectedBed.id, selectedResidentId);
     setActionLoading(false);
     setShowAssignModal(false);
     setSelectedBed(null);
     setSelectedResidentId('');
+    setGenderCompatibility(null);
   };
 
   const handleUnassignResident = async () => {
@@ -65,6 +115,14 @@ export function Dashboard() {
 
   const handleMoveResident = async () => {
     if (!selectedBed?.resident || !selectedTargetBedId) return;
+
+    // Final compatibility check before moving
+    const compatibility = await checkGenderCompatibility(selectedTargetBedId, selectedBed.resident.gender);
+    if (!compatibility.compatible) {
+      setMoveTargetCompatibility(compatibility);
+      return;
+    }
+
     setActionLoading(true);
 
     // Unassign from current bed (sets bed to vacant, removes resident's bed_id)
@@ -77,6 +135,7 @@ export function Dashboard() {
     setShowMoveModal(false);
     setSelectedBed(null);
     setSelectedTargetBedId('');
+    setMoveTargetCompatibility(null);
   };
 
   // Get vacant beds for move functionality
@@ -229,11 +288,32 @@ export function Dashboard() {
         onClose={() => {
           setShowAssignModal(false);
           setSelectedResidentId('');
+          setGenderCompatibility(null);
         }}
         title="Assign Resident"
         size="md"
       >
         <div className="space-y-4">
+          {/* Gender requirement info */}
+          {requiredGenderForBed && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 flex items-start gap-2">
+              <Icon name="info" size={18} className="mt-0.5 flex-shrink-0" />
+              <div>
+                <strong>Gender Restriction:</strong> This bed requires a{' '}
+                <strong>{requiredGenderForBed}</strong> resident due to existing occupancy in the room
+                or shared bathroom.
+              </div>
+            </div>
+          )}
+
+          {/* Gender incompatibility warning */}
+          {genderCompatibility && !genderCompatibility.compatible && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+              <Icon name="warning" size={18} className="mt-0.5 flex-shrink-0" />
+              <div>{genderCompatibility.reason}</div>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-[#0d141b] mb-1">Select Resident</label>
             <select
@@ -242,15 +322,29 @@ export function Dashboard() {
               className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="">Choose a resident...</option>
-              {unassignedResidents.map((resident) => (
-                <option key={resident.id} value={resident.id}>
-                  {resident.first_name} {resident.last_name} ({resident.payor.replace('_', ' ')})
-                </option>
-              ))}
+              {unassignedResidents.map((resident) => {
+                const isCompatible = !requiredGenderForBed || resident.gender === requiredGenderForBed;
+                return (
+                  <option
+                    key={resident.id}
+                    value={resident.id}
+                    disabled={!isCompatible}
+                    className={!isCompatible ? 'text-gray-400' : ''}
+                  >
+                    {resident.first_name} {resident.last_name} ({resident.gender === 'male' ? 'M' : resident.gender === 'female' ? 'F' : 'O'}) - {resident.payor.replace('_', ' ')}
+                    {!isCompatible ? ' (incompatible gender)' : ''}
+                  </option>
+                );
+              })}
             </select>
             {unassignedResidents.length === 0 && (
               <p className="text-sm text-[#4c739a] mt-2">
                 No unassigned residents available. Create a new admission first.
+              </p>
+            )}
+            {requiredGenderForBed && unassignedResidents.filter(r => r.gender === requiredGenderForBed).length === 0 && unassignedResidents.length > 0 && (
+              <p className="text-sm text-yellow-600 mt-2">
+                No {requiredGenderForBed} residents available. Only {requiredGenderForBed} residents can be assigned to this bed.
               </p>
             )}
           </div>
@@ -261,11 +355,16 @@ export function Dashboard() {
               onClick={() => {
                 setShowAssignModal(false);
                 setSelectedResidentId('');
+                setGenderCompatibility(null);
               }}
             >
               Cancel
             </Button>
-            <Button onClick={handleAssignResident} disabled={!selectedResidentId} loading={actionLoading}>
+            <Button
+              onClick={handleAssignResident}
+              disabled={!selectedResidentId || (genderCompatibility !== null && !genderCompatibility.compatible)}
+              loading={actionLoading}
+            >
               Assign
             </Button>
           </div>
@@ -278,6 +377,7 @@ export function Dashboard() {
         onClose={() => {
           setShowMoveModal(false);
           setSelectedTargetBedId('');
+          setMoveTargetCompatibility(null);
         }}
         title="Move Resident"
         size="md"
@@ -288,10 +388,21 @@ export function Dashboard() {
               <p className="text-sm text-[#4c739a] mb-1">Moving Resident</p>
               <p className="font-semibold text-[#0d141b]">
                 {selectedBed.resident.first_name} {selectedBed.resident.last_name}
+                <span className="ml-2 text-xs font-normal text-[#4c739a]">
+                  ({selectedBed.resident.gender === 'male' ? 'Male' : selectedBed.resident.gender === 'female' ? 'Female' : 'Other'})
+                </span>
               </p>
               <p className="text-sm text-[#4c739a]">
                 From: {selectedBed.room?.wing?.name} - Room {selectedBed.room?.room_number} - Bed {selectedBed.bed_letter}
               </p>
+            </div>
+          )}
+
+          {/* Gender incompatibility warning */}
+          {moveTargetCompatibility && !moveTargetCompatibility.compatible && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+              <Icon name="warning" size={18} className="mt-0.5 flex-shrink-0" />
+              <div>{moveTargetCompatibility.reason}</div>
             </div>
           )}
 
@@ -314,6 +425,9 @@ export function Dashboard() {
                 No vacant beds available to move to.
               </p>
             )}
+            <p className="text-xs text-[#4c739a] mt-2">
+              Note: Semi-private rooms and shared bathrooms require same-gender residents.
+            </p>
           </div>
 
           <div className="flex justify-end gap-2">
@@ -322,11 +436,16 @@ export function Dashboard() {
               onClick={() => {
                 setShowMoveModal(false);
                 setSelectedTargetBedId('');
+                setMoveTargetCompatibility(null);
               }}
             >
               Cancel
             </Button>
-            <Button onClick={handleMoveResident} disabled={!selectedTargetBedId} loading={actionLoading}>
+            <Button
+              onClick={handleMoveResident}
+              disabled={!selectedTargetBedId || (moveTargetCompatibility !== null && !moveTargetCompatibility.compatible)}
+              loading={actionLoading}
+            >
               Move Resident
             </Button>
           </div>
