@@ -14,6 +14,7 @@ import {
 import { BedCard, SearchFilter, Modal, Button } from '../components';
 import { useBeds, useBedActions } from '../hooks/useBeds';
 import { useWards } from '../hooks/useWards';
+import { useRooms } from '../hooks/useRooms';
 import { useUnassignedResidents } from '../hooks/useResidents';
 import { cn, formatDate } from '../lib/utils';
 import type { BedWithDetails, BedStatus, FilterOptions } from '../types';
@@ -52,14 +53,21 @@ export function Beds() {
   const [filters, setFilters] = useState<FilterOptions>({});
   const [selectedBed, setSelectedBed] = useState<BedWithDetails | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showAddBedModal, setShowAddBedModal] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [isIsolation, setIsIsolation] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [bedFormData, setBedFormData] = useState({
+    room_id: '',
+    bed_number: '',
+    status: 'available' as BedStatus,
+  });
 
-  const { beds, loading } = useBeds(filters);
+  const { beds, loading, refetch } = useBeds(filters);
   const { wards } = useWards();
+  const { rooms } = useRooms();
   const { residents: unassignedResidents } = useUnassignedResidents();
-  const { updateBedStatus, assignPatient, dischargePatient } = useBedActions();
+  const { updateBedStatus, createBed, assignPatient, dischargePatient } = useBedActions();
 
   const handleStatusChange = async (bedId: string, status: BedStatus) => {
     setActionLoading(true);
@@ -94,6 +102,18 @@ export function Beds() {
     setSelectedBed(null);
   };
 
+  const handleAddBed = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bedFormData.room_id || !bedFormData.bed_number) return;
+
+    setActionLoading(true);
+    await createBed(bedFormData.room_id, bedFormData.bed_number, bedFormData.status);
+    setActionLoading(false);
+    setShowAddBedModal(false);
+    setBedFormData({ room_id: '', bed_number: '', status: 'available' });
+    refetch();
+  };
+
   // Group beds by ward
   const bedsByWard = beds.reduce((acc, bed) => {
     const wardName = bed.room?.ward?.name || 'Unknown';
@@ -119,6 +139,13 @@ export function Beds() {
             <h1 className="text-2xl font-bold text-[#0d141b]">Bed Management</h1>
             <p className="text-[#4c739a]">View and manage all facility beds</p>
           </div>
+          <button
+            onClick={() => setShowAddBedModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#137fec] text-white font-medium text-sm hover:bg-[#1171d4] transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Bed
+          </button>
         </div>
 
         <SearchFilter
@@ -501,6 +528,87 @@ export function Beds() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Add Bed Modal */}
+      <Modal
+        isOpen={showAddBedModal}
+        onClose={() => {
+          setShowAddBedModal(false);
+          setBedFormData({ room_id: '', bed_number: '', status: 'available' });
+        }}
+        title="Add New Bed"
+        size="md"
+      >
+        <form onSubmit={handleAddBed} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#0d141b] mb-1">
+              Select Room *
+            </label>
+            <select
+              required
+              value={bedFormData.room_id}
+              onChange={(e) => setBedFormData({ ...bedFormData, room_id: e.target.value })}
+              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+            >
+              <option value="">Choose a room...</option>
+              {rooms.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.room_number} - {(room as any).ward?.name || 'Unknown Ward'}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0d141b] mb-1">
+              Bed Number *
+            </label>
+            <input
+              type="text"
+              required
+              value={bedFormData.bed_number}
+              onChange={(e) => setBedFormData({ ...bedFormData, bed_number: e.target.value })}
+              placeholder="e.g., A, B, 1, 2"
+              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#0d141b] mb-1">
+              Status
+            </label>
+            <select
+              value={bedFormData.status}
+              onChange={(e) => setBedFormData({ ...bedFormData, status: e.target.value as BedStatus })}
+              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#137fec]"
+            >
+              <option value="available">Available</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="cleaning">Cleaning</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowAddBedModal(false);
+                setBedFormData({ room_id: '', bed_number: '', status: 'available' });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!bedFormData.room_id || !bedFormData.bed_number}
+              loading={actionLoading}
+            >
+              Add Bed
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );
