@@ -50,6 +50,7 @@ export function Residents() {
     first_name: '',
     last_name: '',
     gender: 'male',
+    date_of_birth: '',
     admission_date: new Date().toISOString().split('T')[0],
     payor: 'private',
     diagnosis: '',
@@ -70,6 +71,7 @@ export function Residents() {
     first_name: '',
     last_name: '',
     gender: 'male' as Gender,
+    date_of_birth: '',
     payor: 'private' as PayorType,
     diagnosis: '',
     admission_date: '',
@@ -137,6 +139,7 @@ export function Residents() {
       first_name: '',
       last_name: '',
       gender: 'male',
+      date_of_birth: '',
       admission_date: new Date().toISOString().split('T')[0],
       payor: 'private',
       diagnosis: '',
@@ -154,6 +157,7 @@ export function Residents() {
       first_name: '',
       last_name: '',
       gender: 'male',
+      date_of_birth: '',
       admission_date: new Date().toISOString().split('T')[0],
       payor: 'private',
       diagnosis: '',
@@ -171,6 +175,7 @@ export function Residents() {
       first_name: selectedResident.first_name,
       last_name: selectedResident.last_name,
       gender: selectedResident.gender,
+      date_of_birth: selectedResident.date_of_birth || '',
       payor: selectedResident.payor,
       diagnosis: selectedResident.diagnosis || '',
       admission_date: selectedResident.admission_date,
@@ -195,6 +200,7 @@ export function Residents() {
       first_name: editForm.first_name,
       last_name: editForm.last_name,
       gender: editForm.gender,
+      date_of_birth: editForm.date_of_birth || undefined,
       payor: editForm.payor,
       diagnosis: editForm.diagnosis || undefined,
       admission_date: editForm.admission_date,
@@ -218,6 +224,18 @@ export function Residents() {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const calculateAge = (dateOfBirth: string | undefined) => {
+    if (!dateOfBirth) return null;
+    const dob = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
   };
 
   const getPayorBadge = (payor: string) => {
@@ -328,6 +346,9 @@ export function Residents() {
                 Gender
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Age
+              </th>
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Payor
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -347,7 +368,7 @@ export function Residents() {
           <tbody className="divide-y divide-slate-200">
             {filteredResidents.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
                   No residents found
                 </td>
               </tr>
@@ -381,6 +402,9 @@ export function Residents() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-500 capitalize">{resident.gender}</td>
+                  <td className="px-6 py-4 text-sm text-slate-500">
+                    {calculateAge(resident.date_of_birth) !== null ? `${calculateAge(resident.date_of_birth)}` : '-'}
+                  </td>
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getPayorBadge(
@@ -437,6 +461,14 @@ export function Residents() {
               <div>
                 <p className="text-sm text-slate-500">Gender</p>
                 <p className="font-medium text-slate-900 capitalize">{selectedResident.gender}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Date of Birth</p>
+                <p className="font-medium text-slate-900">
+                  {selectedResident.date_of_birth
+                    ? `${formatDate(selectedResident.date_of_birth)} (${calculateAge(selectedResident.date_of_birth)} years old)`
+                    : '-'}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-slate-500">Payor</p>
@@ -587,8 +619,20 @@ export function Residents() {
             </div>
           </div>
 
-          {/* Gender and Care Level */}
+          {/* Date of Birth and Gender */}
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="cake" size={16} className="text-slate-400" />
+                Date of Birth
+              </label>
+              <input
+                type="date"
+                value={newResident.date_of_birth}
+                onChange={(e) => setNewResident({ ...newResident, date_of_birth: e.target.value })}
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+              />
+            </div>
             <div>
               <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
                 <Icon name="wc" size={16} className="text-slate-400" />
@@ -604,23 +648,25 @@ export function Residents() {
                 <option value="other">Other</option>
               </select>
             </div>
-            <div>
-              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
-                <Icon name="payments" size={16} className="text-slate-400" />
-                Payor *
-              </label>
-              <select
-                value={newResident.payor}
-                onChange={(e) => setNewResident({ ...newResident, payor: e.target.value as PayorType })}
-                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
-              >
-                {PAYOR_TYPES.map((payor) => (
-                  <option key={payor.value} value={payor.value}>
-                    {payor.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          </div>
+
+          {/* Payor */}
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="payments" size={16} className="text-slate-400" />
+              Payor *
+            </label>
+            <select
+              value={newResident.payor}
+              onChange={(e) => setNewResident({ ...newResident, payor: e.target.value as PayorType })}
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
+            >
+              {PAYOR_TYPES.map((payor) => (
+                <option key={payor.value} value={payor.value}>
+                  {payor.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Admission Date */}
@@ -783,8 +829,20 @@ export function Residents() {
             </div>
           </div>
 
-          {/* Gender and Payor */}
+          {/* Date of Birth and Gender */}
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="cake" size={16} className="text-slate-400" />
+                Date of Birth
+              </label>
+              <input
+                type="date"
+                value={editForm.date_of_birth}
+                onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })}
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+              />
+            </div>
             <div>
               <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
                 <Icon name="wc" size={16} className="text-slate-400" />
@@ -800,23 +858,25 @@ export function Residents() {
                 <option value="other">Other</option>
               </select>
             </div>
-            <div>
-              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
-                <Icon name="payments" size={16} className="text-slate-400" />
-                Payor *
-              </label>
-              <select
-                value={editForm.payor}
-                onChange={(e) => setEditForm({ ...editForm, payor: e.target.value as PayorType })}
-                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
-              >
-                {PAYOR_TYPES.map((payor) => (
-                  <option key={payor.value} value={payor.value}>
-                    {payor.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          </div>
+
+          {/* Payor */}
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="payments" size={16} className="text-slate-400" />
+              Payor *
+            </label>
+            <select
+              value={editForm.payor}
+              onChange={(e) => setEditForm({ ...editForm, payor: e.target.value as PayorType })}
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
+            >
+              {PAYOR_TYPES.map((payor) => (
+                <option key={payor.value} value={payor.value}>
+                  {payor.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Admission Date */}
