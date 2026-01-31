@@ -23,6 +23,7 @@ export function TopNavBar({ searchQuery, onSearchChange, user, onSignOut }: TopN
     { path: '/', label: 'Dashboard' },
     { path: '/residents', label: 'Residents' },
     { path: '/admissions', label: 'Admissions' },
+    { path: '/analytics', label: 'Analytics' },
     { path: '/settings', label: 'Settings' },
   ];
 
