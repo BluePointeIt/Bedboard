@@ -49,7 +49,7 @@ export function Dashboard() {
     if (selectedResidentId && selectedBed) {
       const resident = unassignedResidents.find((r) => r.id === selectedResidentId);
       if (resident) {
-        checkGenderCompatibility(selectedBed.id, resident.gender).then(setGenderCompatibility);
+        checkGenderCompatibility(selectedBed.id, resident.gender, resident.is_isolation).then(setGenderCompatibility);
       }
     } else {
       setGenderCompatibility(null);
@@ -59,7 +59,7 @@ export function Dashboard() {
   // Check gender compatibility when a target bed is selected for move
   useEffect(() => {
     if (selectedTargetBedId && selectedBed?.resident) {
-      checkGenderCompatibility(selectedTargetBedId, selectedBed.resident.gender).then(setMoveTargetCompatibility);
+      checkGenderCompatibility(selectedTargetBedId, selectedBed.resident.gender, selectedBed.resident.is_isolation).then(setMoveTargetCompatibility);
     } else {
       setMoveTargetCompatibility(null);
     }
@@ -71,7 +71,7 @@ export function Dashboard() {
     // Final compatibility check before assigning
     const resident = unassignedResidents.find((r) => r.id === selectedResidentId);
     if (resident) {
-      const compatibility = await checkGenderCompatibility(selectedBed.id, resident.gender);
+      const compatibility = await checkGenderCompatibility(selectedBed.id, resident.gender, resident.is_isolation);
       if (!compatibility.compatible) {
         setGenderCompatibility(compatibility);
         return;
@@ -115,7 +115,7 @@ export function Dashboard() {
     if (!selectedBed?.resident || !selectedTargetBedId) return;
 
     // Final compatibility check before moving
-    const compatibility = await checkGenderCompatibility(selectedTargetBedId, selectedBed.resident.gender);
+    const compatibility = await checkGenderCompatibility(selectedTargetBedId, selectedBed.resident.gender, selectedBed.resident.is_isolation);
     if (!compatibility.compatible) {
       setMoveTargetCompatibility(compatibility);
       return;

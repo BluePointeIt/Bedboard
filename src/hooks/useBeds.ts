@@ -11,6 +11,7 @@ export interface GenderCompatibilityResult {
   existingGender?: Gender | null;
   roomBedCount?: number;
   sharedBathroomRooms?: string[];
+  isolationConflict?: boolean;
 }
 
 // Generate unique channel ID for each hook instance
@@ -259,14 +260,17 @@ export function useBedActions() {
   };
 
   /**
-   * Check if a resident's gender is compatible with a bed's room and shared bathroom group.
+   * Check if a resident's gender and isolation status is compatible with a bed's room and shared bathroom group.
    * Rules:
    * - Semi-private/triple rooms (2+ beds) cannot have mixed sexes
    * - Rooms sharing a bathroom cannot have mixed sexes across the bathroom group
+   * - In a room with an isolation resident, only another isolation resident of the same sex can be placed
+   * - Non-isolation residents cannot be placed with isolation residents in the same room
    */
   const checkGenderCompatibility = async (
     bedId: string,
-    residentGender: Gender
+    residentGender: Gender,
+    residentIsIsolation: boolean = false
   ): Promise<GenderCompatibilityResult> => {
     if (!supabaseConfigured) {
       return { compatible: true };
@@ -351,12 +355,44 @@ export function useBedActions() {
     const occupiedBedIds = occupiedBeds.map((b) => b.id);
     const { data: residents } = await supabase
       .from('residents')
-      .select('id, gender, bed_id')
+      .select('id, gender, bed_id, is_isolation')
       .in('bed_id', occupiedBedIds)
       .eq('status', 'active');
 
     if (!residents || residents.length === 0) {
       return { compatible: true, roomBedCount, sharedBathroomRooms };
+    }
+
+    // Check isolation compatibility for same-room residents only (not shared bathroom)
+    const sameRoomResidents = residents.filter((r) =>
+      occupiedBeds.find((b) => b.id === r.bed_id && b.room_id === room.id)
+    );
+
+    if (isMultiBedRoom && sameRoomResidents.length > 0) {
+      const hasIsolationResident = sameRoomResidents.some((r) => r.is_isolation);
+      const hasNonIsolationResident = sameRoomResidents.some((r) => !r.is_isolation);
+
+      // If room has an isolation resident, new resident must also be isolation AND same gender
+      if (hasIsolationResident && !residentIsIsolation) {
+        return {
+          compatible: false,
+          reason: `Room ${room.room_number} has an isolation resident. Only another isolation resident of the same sex can be placed in this room.`,
+          roomBedCount,
+          sharedBathroomRooms,
+          isolationConflict: true,
+        };
+      }
+
+      // If room has a non-isolation resident, cannot add isolation resident
+      if (hasNonIsolationResident && residentIsIsolation) {
+        return {
+          compatible: false,
+          reason: `Room ${room.room_number} has a non-isolation resident. Isolation residents cannot be placed with non-isolation residents.`,
+          roomBedCount,
+          sharedBathroomRooms,
+          isolationConflict: true,
+        };
+      }
     }
 
     // Check if any existing resident has a different gender
@@ -377,9 +413,7 @@ export function useBedActions() {
     // Check if the new resident's gender matches
     if (existingGender !== residentGender) {
       // Determine where the conflict is
-      const sameRoomOccupied = residents.some((r) =>
-        occupiedBeds.find((b) => b.id === r.bed_id && b.room_id === room.id)
-      );
+      const sameRoomOccupied = sameRoomResidents.length > 0;
 
       let reason: string;
       if (sameRoomOccupied && isMultiBedRoom) {
