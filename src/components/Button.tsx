@@ -3,26 +3,27 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   children: ReactNode;
   loading?: boolean;
 }
 
 const variantClasses = {
   primary:
-    'bg-[#137fec] text-white hover:bg-[#1171d4] focus:ring-[#137fec]',
+    'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500 shadow-lg shadow-primary-500/30',
   secondary:
-    'bg-[#e7edf3] text-[#0d141b] border border-[#cfdbe7] hover:bg-[#d9e2ec] focus:ring-[#4c739a]',
+    'bg-slate-100 text-slate-900 border border-slate-200 hover:bg-slate-200 focus:ring-slate-400',
   danger:
-    'bg-[#ef4444] text-white hover:bg-[#dc2626] focus:ring-[#ef4444]',
+    'bg-red-500 text-white hover:bg-red-600 focus:ring-red-500 shadow-lg shadow-red-500/20',
   ghost:
-    'bg-transparent text-[#4c739a] hover:bg-slate-100 focus:ring-[#4c739a]',
+    'bg-transparent text-slate-500 hover:bg-slate-100 focus:ring-slate-400',
 };
 
 const sizeClasses = {
   sm: 'px-3 py-1.5 text-sm',
   md: 'px-4 py-2 text-sm',
   lg: 'px-6 py-3 text-base',
+  xl: 'h-12 px-6 text-base font-bold',
 };
 
 export function Button({

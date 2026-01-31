@@ -588,39 +588,50 @@ export function Settings() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-bold text-[#0d141b]">Settings</h1>
-        <p className="text-[#4c739a]">Configure your facility settings</p>
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-xl bg-primary-500/10 flex items-center justify-center">
+          <Icon name="settings" size={24} className="text-primary-500" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Settings</h1>
+          <p className="text-slate-500">Configure your facility settings</p>
+        </div>
       </div>
 
       {/* Facility Information */}
-      <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
             <Icon name="domain" size={20} className="text-primary-500" />
           </div>
           <div>
-            <h2 className="font-semibold text-[#0d141b]">Facility Information</h2>
-            <p className="text-sm text-[#4c739a]">Configure your facility details</p>
+            <h2 className="font-semibold text-slate-900">Facility Information</h2>
+            <p className="text-sm text-slate-500">Configure your facility details</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Facility Name</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="business" size={16} className="text-slate-400" />
+              Facility Name
+            </label>
             <input
               type="text"
               value={facilityName}
               onChange={(e) => setFacilityName(e.target.value)}
               placeholder="Enter facility name"
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Total Facility Beds</label>
-            <div className="px-3 py-2 border border-[#e7edf3] rounded-lg bg-[#f6f7f8]">
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="bed" size={16} className="text-slate-400" />
+              Total Facility Beds
+            </label>
+            <div className="h-12 px-4 flex items-center border border-slate-200 rounded-lg bg-slate-50">
               <span className="text-2xl font-bold text-primary-500">{totalBeds}</span>
-              <span className="text-sm text-[#4c739a] ml-2">beds across {wings.length} wings</span>
+              <span className="text-sm text-slate-500 ml-2">beds across {wings.length} wings</span>
             </div>
           </div>
         </div>
@@ -634,14 +645,14 @@ export function Settings() {
       </div>
 
       {/* Budget Settings */}
-      <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
             <Icon name="payments" size={20} className="text-green-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-[#0d141b]">Budget Settings</h2>
-            <p className="text-sm text-[#4c739a]">Configure occupancy targets and payor rates</p>
+            <h2 className="font-semibold text-slate-900">Budget Settings</h2>
+            <p className="text-sm text-slate-500">Configure occupancy targets and payor rates</p>
           </div>
         </div>
 
@@ -653,85 +664,86 @@ export function Settings() {
         ) : (
           <>
         <div>
-          <label className="block text-sm font-medium text-[#0d141b] mb-3">
-            Case-Mix <span className="font-normal text-[#4c739a]">(Budgeted Residents)</span>
+          <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-3">
+            <Icon name="pie_chart" size={16} className="text-slate-400" />
+            Case-Mix <span className="font-normal text-slate-500">(Budgeted Residents)</span>
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
-              <label className="block text-xs text-[#4c739a] mb-1">Private</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Private</label>
               <input
                 type="number"
                 min="0"
                 value={payorRates.private || ''}
                 onChange={(e) => updatePayorRate('private', e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
               />
             </div>
             <div>
-              <label className="block text-xs text-[#4c739a] mb-1">Medicare</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Medicare</label>
               <input
                 type="number"
                 min="0"
                 value={payorRates.medicare || ''}
                 onChange={(e) => updatePayorRate('medicare', e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
               />
             </div>
             <div>
-              <label className="block text-xs text-[#4c739a] mb-1">Medicaid</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Medicaid</label>
               <input
                 type="number"
                 min="0"
                 value={payorRates.medicaid || ''}
                 onChange={(e) => updatePayorRate('medicaid', e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
               />
             </div>
             <div>
-              <label className="block text-xs text-[#4c739a] mb-1">Managed Care</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Managed Care</label>
               <input
                 type="number"
                 min="0"
                 value={payorRates.managed_care || ''}
                 onChange={(e) => updatePayorRate('managed_care', e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
               />
             </div>
             <div>
-              <label className="block text-xs text-[#4c739a] mb-1">Hospice</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Hospice</label>
               <input
                 type="number"
                 min="0"
                 value={payorRates.hospice || ''}
                 onChange={(e) => updatePayorRate('hospice', e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
               />
             </div>
             <div>
-              <label className="block text-xs text-[#4c739a] mb-1">Other</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Other</label>
               <input
                 type="number"
                 min="0"
                 value={payorRates.other || ''}
                 onChange={(e) => updatePayorRate('other', e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-center"
+                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
               />
             </div>
           </div>
         </div>
 
         {/* Calculated Occupancy Target */}
-        <div className="mt-6 p-4 bg-[#f6f7f8] rounded-lg border border-[#e7edf3]">
+        <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-medium text-[#0d141b]">Calculated Occupancy Target</p>
-              <p className="text-xs text-[#4c739a]">
+              <p className="text-sm font-medium text-slate-900">Calculated Occupancy Target</p>
+              <p className="text-xs text-slate-500">
                 {caseMixTotal} budgeted residents / {totalBeds} total beds
               </p>
             </div>
@@ -739,7 +751,7 @@ export function Settings() {
               <span className="text-3xl font-bold text-green-600">{calculatedOccupancyTarget}%</span>
             </div>
           </div>
-          <div className="h-3 bg-[#e7edf3] rounded-full overflow-hidden">
+          <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-300 ${
                 calculatedOccupancyTarget > 100 ? 'bg-red-500' : 'bg-green-500'
@@ -765,15 +777,15 @@ export function Settings() {
       </div>
 
       {/* Facility Wings with Rooms and Beds */}
-      <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
               <Icon name="grid_view" size={20} className="text-primary-500" />
             </div>
             <div>
-              <h2 className="font-semibold text-[#0d141b]">Facility Wings</h2>
-              <p className="text-sm text-[#4c739a]">Manage wings, rooms, and beds</p>
+              <h2 className="font-semibold text-slate-900">Facility Wings</h2>
+              <p className="text-sm text-slate-500">Manage wings, rooms, and beds</p>
             </div>
           </div>
           <Button variant="secondary" onClick={() => setShowImportModal(true)}>
@@ -793,22 +805,22 @@ export function Settings() {
               const wingRooms = roomsByWing[wing.id] || [];
 
               return (
-                <div key={wing.id} className="border border-[#e7edf3] rounded-lg overflow-hidden">
+                <div key={wing.id} className="border border-slate-200 rounded-lg overflow-hidden">
                   {/* Wing Header */}
                   <div
-                    className="flex items-center justify-between px-4 py-3 bg-[#f6f7f8] cursor-pointer hover:bg-[#eef1f5] transition-colors"
+                    className="flex items-center justify-between px-4 py-3 bg-slate-50 cursor-pointer hover:bg-[#eef1f5] transition-colors"
                     onClick={() => toggleWingExpanded(wing.id)}
                   >
                     <div className="flex items-center gap-3">
                       <Icon
                         name={isExpanded ? 'expand_more' : 'chevron_right'}
                         size={20}
-                        className="text-[#4c739a]"
+                        className="text-slate-500"
                       />
                       <Icon name="domain" size={18} className="text-primary-500" />
                       <div>
-                        <span className="font-medium text-[#0d141b]">{wing.name}</span>
-                        <span className="text-sm text-[#4c739a] ml-2">
+                        <span className="font-medium text-slate-900">{wing.name}</span>
+                        <span className="text-sm text-slate-500 ml-2">
                           ({wing.wing_type.replace('_', ' ')})
                         </span>
                       </div>
@@ -833,7 +845,7 @@ export function Settings() {
                           e.stopPropagation();
                           handleEditWingClick(wing);
                         }}
-                        className="p-1.5 text-[#4c739a] hover:text-primary-500 hover:bg-primary-500/10 rounded transition-colors"
+                        className="p-1.5 text-slate-500 hover:text-primary-500 hover:bg-primary-500/10 rounded transition-colors"
                         title="Edit wing"
                       >
                         <Icon name="edit" size={16} />
@@ -849,33 +861,33 @@ export function Settings() {
                           {wingRooms.map((room) => (
                             <div
                               key={room.id}
-                              className="border border-[#e7edf3] rounded-lg p-3 bg-white"
+                              className="border border-slate-200 rounded-lg p-3 bg-white"
                             >
                               {/* Room Header */}
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-3">
-                                  <Icon name="meeting_room" size={18} className="text-[#4c739a]" />
-                                  <span className="font-medium text-[#0d141b]">
+                                  <Icon name="meeting_room" size={18} className="text-slate-500" />
+                                  <span className="font-medium text-slate-900">
                                     Room {room.room_number}
                                   </span>
-                                  <span className="text-xs text-[#4c739a] bg-[#f6f7f8] px-2 py-0.5 rounded">
+                                  <span className="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded">
                                     {getBathroomGroupDisplay(room)}
                                   </span>
-                                  <span className="text-xs text-[#4c739a]">
+                                  <span className="text-xs text-slate-500">
                                     {room.beds.length} bed{room.beds.length !== 1 ? 's' : ''}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <button
                                     onClick={() => handleEditRoomClick(room)}
-                                    className="p-1.5 text-[#4c739a] hover:text-primary-500 hover:bg-primary-500/10 rounded transition-colors"
+                                    className="p-1.5 text-slate-500 hover:text-primary-500 hover:bg-primary-500/10 rounded transition-colors"
                                     title="Edit room"
                                   >
                                     <Icon name="edit" size={14} />
                                   </button>
                                   <button
                                     onClick={() => handleDeleteRoomClick(room)}
-                                    className="p-1.5 text-[#4c739a] hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                    className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                                     title="Delete room"
                                   >
                                     <Icon name="delete" size={14} />
@@ -888,7 +900,7 @@ export function Settings() {
                                 {room.beds.map((bed) => (
                                   <div
                                     key={bed.id}
-                                    className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-[#f6f7f8]"
+                                    className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-slate-50"
                                   >
                                     <div className="flex items-center gap-2">
                                       <Icon
@@ -902,7 +914,7 @@ export function Settings() {
                                             : 'text-green-500'
                                         }
                                       />
-                                      <span className="text-sm text-[#0d141b]">
+                                      <span className="text-sm text-slate-900">
                                         Bed {bed.bed_letter}
                                       </span>
                                       <span
@@ -919,7 +931,7 @@ export function Settings() {
                                           : bed.status.charAt(0).toUpperCase() + bed.status.slice(1)}
                                       </span>
                                       {bed.resident && (
-                                        <span className="text-xs text-[#4c739a]">
+                                        <span className="text-xs text-slate-500">
                                           ({bed.resident.first_name} {bed.resident.last_name})
                                         </span>
                                       )}
@@ -927,7 +939,7 @@ export function Settings() {
                                     {bed.status === 'vacant' && (
                                       <button
                                         onClick={() => handleDeleteBedClick(bed, room.room_number)}
-                                        className="p-1 text-[#4c739a] hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                        className="p-1 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                                         title="Delete bed"
                                       >
                                         <Icon name="delete" size={12} />
@@ -937,7 +949,7 @@ export function Settings() {
                                 ))}
 
                                 {room.beds.length === 0 && (
-                                  <div className="text-xs text-[#4c739a] italic py-1">
+                                  <div className="text-xs text-slate-500 italic py-1">
                                     No beds in this room
                                   </div>
                                 )}
@@ -955,7 +967,7 @@ export function Settings() {
                           ))}
                         </>
                       ) : (
-                        <div className="text-sm text-[#4c739a] italic text-center py-4">
+                        <div className="text-sm text-slate-500 italic text-center py-4">
                           No rooms in this wing
                         </div>
                       )}
@@ -975,32 +987,32 @@ export function Settings() {
             })}
           </div>
         ) : (
-          <div className="text-center py-12 bg-[#f6f7f8] rounded-lg border border-[#e7edf3]">
+          <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
             <Icon name="domain" size={48} className="text-[#c4d4e5] mx-auto mb-3" />
-            <p className="text-[#4c739a]">No wings configured</p>
+            <p className="text-slate-500">No wings configured</p>
           </div>
         )}
 
         {/* Summary Cards */}
         {wings.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-[#f6f7f8] rounded-lg p-4 border border-[#e7edf3]">
-              <p className="text-2xl font-bold text-[#0d141b]">{wings.length}</p>
-              <p className="text-xs text-[#4c739a] uppercase font-medium">Total Wings</p>
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <p className="text-2xl font-bold text-slate-900">{wings.length}</p>
+              <p className="text-xs text-slate-500 uppercase font-medium">Total Wings</p>
             </div>
-            <div className="bg-[#f6f7f8] rounded-lg p-4 border border-[#e7edf3]">
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
               <p className="text-2xl font-bold text-primary-500">{rooms.length}</p>
-              <p className="text-xs text-[#4c739a] uppercase font-medium">Total Rooms</p>
+              <p className="text-xs text-slate-500 uppercase font-medium">Total Rooms</p>
             </div>
-            <div className="bg-[#f6f7f8] rounded-lg p-4 border border-[#e7edf3]">
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
               <p className="text-2xl font-bold text-primary-500">{totalBeds}</p>
-              <p className="text-xs text-[#4c739a] uppercase font-medium">Total Beds</p>
+              <p className="text-xs text-slate-500 uppercase font-medium">Total Beds</p>
             </div>
-            <div className="bg-[#f6f7f8] rounded-lg p-4 border border-[#e7edf3]">
-              <p className="text-2xl font-bold text-[#0d141b]">
+            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <p className="text-2xl font-bold text-slate-900">
                 {wings.reduce((sum, w) => sum + w.occupied_beds, 0)}
               </p>
-              <p className="text-xs text-[#4c739a] uppercase font-medium">Occupied Beds</p>
+              <p className="text-xs text-slate-500 uppercase font-medium">Occupied Beds</p>
             </div>
           </div>
         )}
@@ -1026,22 +1038,28 @@ export function Settings() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Wing Name</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="domain" size={16} className="text-slate-400" />
+                Wing Name
+              </label>
               <input
                 type="text"
                 value={editWingForm.name}
                 onChange={(e) => setEditWingForm({ ...editWingForm, name: e.target.value })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
                 placeholder="Enter wing name"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Wing Type</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="category" size={16} className="text-slate-400" />
+                Wing Type
+              </label>
               <select
                 value={editWingForm.wing_type}
                 onChange={(e) => setEditWingForm({ ...editWingForm, wing_type: e.target.value as WingType })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
               >
                 {WING_TYPES.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -1051,7 +1069,7 @@ export function Settings() {
               </select>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-[#e7edf3]">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -1089,61 +1107,67 @@ export function Settings() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Room Number</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="meeting_room" size={16} className="text-slate-400" />
+              Room Number
+            </label>
             <input
               type="text"
               value={addRoomForm.room_number}
               onChange={(e) => setAddRoomForm({ ...addRoomForm, room_number: e.target.value })}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
               placeholder="e.g., 101, 102A"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-2">Bathroom Type</label>
-            <div className="space-y-2">
-              <label className="flex items-center gap-2">
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-3">
+              <Icon name="bathroom" size={16} className="text-slate-400" />
+              Bathroom Type
+            </label>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer group">
                 <input
                   type="radio"
                   name="bathroom_option"
                   checked={addRoomForm.bathroom_group_option === 'none'}
                   onChange={() => setAddRoomForm({ ...addRoomForm, bathroom_group_option: 'none' })}
-                  className="text-primary-500"
+                  className="w-4 h-4 text-primary-500 border-slate-300"
                 />
-                <span className="text-sm text-[#0d141b]">Private bathroom</span>
+                <span className="text-sm text-slate-700 group-hover:text-primary-500 transition-colors">Private bathroom</span>
               </label>
-              <label className="flex items-center gap-2">
+              <label className="flex items-center gap-3 cursor-pointer group">
                 <input
                   type="radio"
                   name="bathroom_option"
                   checked={addRoomForm.bathroom_group_option === 'new'}
                   onChange={() => setAddRoomForm({ ...addRoomForm, bathroom_group_option: 'new' })}
-                  className="text-primary-500"
+                  className="w-4 h-4 text-primary-500 border-slate-300"
                 />
-                <span className="text-sm text-[#0d141b]">Create new shared bathroom group</span>
+                <span className="text-sm text-slate-700 group-hover:text-primary-500 transition-colors">Create new shared bathroom group</span>
               </label>
               {bathroomGroups.length > 0 && (
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-3 cursor-pointer group">
                   <input
                     type="radio"
                     name="bathroom_option"
                     checked={addRoomForm.bathroom_group_option === 'existing'}
                     onChange={() => setAddRoomForm({ ...addRoomForm, bathroom_group_option: 'existing' })}
-                    className="text-primary-500"
+                    className="w-4 h-4 text-primary-500 border-slate-300"
                   />
-                  <span className="text-sm text-[#0d141b]">Join existing bathroom group</span>
+                  <span className="text-sm text-slate-700 group-hover:text-primary-500 transition-colors">Join existing bathroom group</span>
                 </label>
               )}
             </div>
 
             {addRoomForm.bathroom_group_option === 'existing' && bathroomGroups.length > 0 && (
-              <div className="mt-3 pl-6">
+              <div className="mt-4 pl-7">
                 <select
                   value={addRoomForm.selected_bathroom_group_id}
                   onChange={(e) =>
                     setAddRoomForm({ ...addRoomForm, selected_bathroom_group_id: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white text-sm"
+                  className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
                 >
                   <option value="">Select a group...</option>
                   {bathroomGroups.map((group) => (
@@ -1156,7 +1180,7 @@ export function Settings() {
             )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#e7edf3]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button
               variant="secondary"
               onClick={() => {
@@ -1198,41 +1222,47 @@ export function Settings() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Room Number</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="meeting_room" size={16} className="text-slate-400" />
+                Room Number
+              </label>
               <input
                 type="text"
                 value={editRoomForm.room_number}
                 onChange={(e) => setEditRoomForm({ ...editRoomForm, room_number: e.target.value })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
                 placeholder="e.g., 101, 102A"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-2">Bathroom Type</label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-3">
+                <Icon name="bathroom" size={16} className="text-slate-400" />
+                Bathroom Type
+              </label>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer group">
                   <input
                     type="radio"
                     name="edit_bathroom_option"
                     checked={editRoomForm.bathroom_group_option === 'none'}
                     onChange={() => setEditRoomForm({ ...editRoomForm, bathroom_group_option: 'none' })}
-                    className="text-primary-500"
+                    className="w-4 h-4 text-primary-500 border-slate-300"
                   />
-                  <span className="text-sm text-[#0d141b]">Private bathroom</span>
+                  <span className="text-sm text-slate-700 group-hover:text-primary-500 transition-colors">Private bathroom</span>
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-3 cursor-pointer group">
                   <input
                     type="radio"
                     name="edit_bathroom_option"
                     checked={editRoomForm.bathroom_group_option === 'new'}
                     onChange={() => setEditRoomForm({ ...editRoomForm, bathroom_group_option: 'new' })}
-                    className="text-primary-500"
+                    className="w-4 h-4 text-primary-500 border-slate-300"
                   />
-                  <span className="text-sm text-[#0d141b]">Create new shared bathroom group</span>
+                  <span className="text-sm text-slate-700 group-hover:text-primary-500 transition-colors">Create new shared bathroom group</span>
                 </label>
                 {bathroomGroups.length > 0 && (
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center gap-3 cursor-pointer group">
                     <input
                       type="radio"
                       name="edit_bathroom_option"
@@ -1240,21 +1270,21 @@ export function Settings() {
                       onChange={() =>
                         setEditRoomForm({ ...editRoomForm, bathroom_group_option: 'existing' })
                       }
-                      className="text-primary-500"
+                      className="w-4 h-4 text-primary-500 border-slate-300"
                     />
-                    <span className="text-sm text-[#0d141b]">Join existing bathroom group</span>
+                    <span className="text-sm text-slate-700 group-hover:text-primary-500 transition-colors">Join existing bathroom group</span>
                   </label>
                 )}
               </div>
 
               {editRoomForm.bathroom_group_option === 'existing' && bathroomGroups.length > 0 && (
-                <div className="mt-3 pl-6">
+                <div className="mt-4 pl-7">
                   <select
                     value={editRoomForm.selected_bathroom_group_id}
                     onChange={(e) =>
                       setEditRoomForm({ ...editRoomForm, selected_bathroom_group_id: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white text-sm"
+                    className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
                   >
                     <option value="">Select a group...</option>
                     {bathroomGroups.map((group) => (
@@ -1267,7 +1297,7 @@ export function Settings() {
               )}
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-[#e7edf3]">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -1309,19 +1339,22 @@ export function Settings() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Bed Letter</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="bed" size={16} className="text-slate-400" />
+              Bed Letter
+            </label>
             <input
               type="text"
               value={addBedForm.bed_letter}
               onChange={(e) => setAddBedForm({ bed_letter: e.target.value.toUpperCase() })}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-bold text-lg"
               placeholder="e.g., A, B, C"
               maxLength={2}
             />
-            <p className="text-xs text-[#4c739a] mt-1">Suggested: {suggestedBedLetter}</p>
+            <p className="text-xs text-slate-500 mt-2">Suggested: <span className="font-semibold text-primary-500">{suggestedBedLetter}</span></p>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#e7edf3]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button
               variant="secondary"
               onClick={() => {
@@ -1362,7 +1395,7 @@ export function Settings() {
               </div>
             )}
 
-            <p className="text-[#0d141b]">
+            <p className="text-slate-900">
               Are you sure you want to delete <strong>{deleteTarget.name}</strong>?
             </p>
 
@@ -1375,7 +1408,7 @@ export function Settings() {
               </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-[#e7edf3]">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -1420,13 +1453,13 @@ export function Settings() {
             </div>
           )}
 
-          <div className="p-4 bg-[#f6f7f8] rounded-lg border border-[#e7edf3]">
-            <p className="text-sm font-medium text-[#0d141b] mb-2">CSV File Format</p>
-            <p className="text-xs text-[#4c739a] mb-3">
+          <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <p className="text-sm font-medium text-slate-900 mb-2">CSV File Format</p>
+            <p className="text-xs text-slate-500 mb-3">
               Upload a CSV file with columns: room_number, wing_name, beds, shared_bathroom, bathroom_group
             </p>
-            <div className="text-xs font-mono bg-white p-2 rounded border border-[#e7edf3] overflow-x-auto">
-              <div className="text-[#4c739a]">room_number,wing_name,beds,shared_bathroom,bathroom_group</div>
+            <div className="text-xs font-mono bg-white p-2 rounded border border-slate-200 overflow-x-auto">
+              <div className="text-slate-500">room_number,wing_name,beds,shared_bathroom,bathroom_group</div>
               <div>101,North Wing,A B,no,</div>
               <div>102,North Wing,A B,yes,group1</div>
               <div>103,North Wing,A,yes,group1</div>
@@ -1441,15 +1474,15 @@ export function Settings() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-2">Select File</label>
+            <label className="block text-sm font-medium text-slate-900 mb-2">Select File</label>
             <input
               type="file"
               accept=".csv"
               onChange={handleFileSelect}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
             />
             {importFile && (
-              <p className="text-xs text-[#4c739a] mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 Selected: {importFile.name}
               </p>
             )}
@@ -1457,23 +1490,23 @@ export function Settings() {
 
           {importPreview.length > 0 && (
             <div>
-              <p className="text-sm font-medium text-[#0d141b] mb-2">
+              <p className="text-sm font-medium text-slate-900 mb-2">
                 Preview ({importPreview.length} rows)
               </p>
-              <div className="max-h-48 overflow-auto border border-[#e7edf3] rounded-lg">
+              <div className="max-h-48 overflow-auto border border-slate-200 rounded-lg">
                 <table className="w-full text-xs">
-                  <thead className="bg-[#f6f7f8] sticky top-0">
+                  <thead className="bg-slate-50 sticky top-0">
                     <tr>
-                      <th className="px-2 py-1 text-left text-[#4c739a]">Room</th>
-                      <th className="px-2 py-1 text-left text-[#4c739a]">Wing</th>
-                      <th className="px-2 py-1 text-left text-[#4c739a]">Beds</th>
-                      <th className="px-2 py-1 text-left text-[#4c739a]">Shared Bath</th>
-                      <th className="px-2 py-1 text-left text-[#4c739a]">Group</th>
+                      <th className="px-2 py-1 text-left text-slate-500">Room</th>
+                      <th className="px-2 py-1 text-left text-slate-500">Wing</th>
+                      <th className="px-2 py-1 text-left text-slate-500">Beds</th>
+                      <th className="px-2 py-1 text-left text-slate-500">Shared Bath</th>
+                      <th className="px-2 py-1 text-left text-slate-500">Group</th>
                     </tr>
                   </thead>
                   <tbody>
                     {importPreview.slice(0, 20).map((row, i) => (
-                      <tr key={i} className="border-t border-[#e7edf3]">
+                      <tr key={i} className="border-t border-slate-200">
                         <td className="px-2 py-1">{row.room_number}</td>
                         <td className="px-2 py-1">{row.wing_name}</td>
                         <td className="px-2 py-1">{row.beds}</td>
@@ -1484,7 +1517,7 @@ export function Settings() {
                   </tbody>
                 </table>
                 {importPreview.length > 20 && (
-                  <p className="text-xs text-[#4c739a] p-2 text-center bg-[#f6f7f8]">
+                  <p className="text-xs text-slate-500 p-2 text-center bg-slate-50">
                     ... and {importPreview.length - 20} more rows
                   </p>
                 )}
@@ -1492,7 +1525,7 @@ export function Settings() {
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#e7edf3]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button
               variant="secondary"
               onClick={() => {

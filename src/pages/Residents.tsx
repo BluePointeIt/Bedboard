@@ -264,13 +264,21 @@ export function Residents() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#0d141b]">Residents</h1>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
+            <Icon name="group" size={20} className="text-primary-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Residents</h1>
+            <p className="text-sm text-slate-500">Manage resident records and assignments</p>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
-          <div className="flex bg-[#e7edf3] rounded-lg p-1">
+          <div className="flex bg-slate-100 rounded-lg p-1">
             <button
               onClick={() => setShowDischargedTab(false)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                !showDischargedTab ? 'bg-white text-[#0d141b] shadow-sm' : 'text-[#4c739a]'
+                !showDischargedTab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
               }`}
             >
               Active ({activeResidents.length})
@@ -278,7 +286,7 @@ export function Residents() {
             <button
               onClick={() => setShowDischargedTab(true)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                showDischargedTab ? 'bg-white text-[#0d141b] shadow-sm' : 'text-[#4c739a]'
+                showDischargedTab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
               }`}
             >
               Discharged ({dischargedResidents.length})
@@ -294,13 +302,13 @@ export function Residents() {
       {/* Search */}
       <div className="flex items-center gap-4">
         <div className="flex-1 max-w-md">
-          <div className="flex items-stretch rounded-lg bg-[#e7edf3] h-10">
-            <div className="flex items-center justify-center pl-4 text-[#4c739a]">
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
               <Icon name="search" size={20} />
             </div>
             <input
-              className="w-full border-none bg-transparent focus:ring-0 focus:outline-none text-sm placeholder:text-[#4c739a] px-3"
-              placeholder="Search residents..."
+              className="w-full h-12 pl-12 pr-4 border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-slate-900 placeholder:text-slate-400"
+              placeholder="Search residents by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -309,43 +317,43 @@ export function Residents() {
       </div>
 
       {/* Residents Table */}
-      <div className="bg-white rounded-xl border border-[#e7edf3] overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <table className="w-full">
-          <thead className="bg-[#f6f7f8] border-b border-[#e7edf3]">
+          <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-[#4c739a] uppercase tracking-wider">
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Name
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-[#4c739a] uppercase tracking-wider">
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Gender
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-[#4c739a] uppercase tracking-wider">
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Payor
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-[#4c739a] uppercase tracking-wider">
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Diagnosis
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-[#4c739a] uppercase tracking-wider">
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Admission Date
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-[#4c739a] uppercase tracking-wider">
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="text-right px-6 py-3 text-xs font-semibold text-[#4c739a] uppercase tracking-wider">
+              <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e7edf3]">
+          <tbody className="divide-y divide-slate-200">
             {filteredResidents.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-[#4c739a]">
+                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
                   No residents found
                 </td>
               </tr>
             ) : (
               filteredResidents.map((resident) => (
-                <tr key={resident.id} className="hover:bg-[#f6f7f8] transition-colors">
+                <tr key={resident.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div
@@ -360,7 +368,7 @@ export function Residents() {
                         />
                       </div>
                       <div>
-                        <p className="font-medium text-[#0d141b]">
+                        <p className="font-medium text-slate-900">
                           {resident.first_name} {resident.last_name}
                         </p>
                         {resident.is_isolation && (
@@ -372,7 +380,7 @@ export function Residents() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-[#4c739a] capitalize">{resident.gender}</td>
+                  <td className="px-6 py-4 text-sm text-slate-500 capitalize">{resident.gender}</td>
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getPayorBadge(
@@ -382,10 +390,10 @@ export function Residents() {
                       {getPayorLabel(resident.payor)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-[#4c739a] max-w-[200px] truncate" title={resident.diagnosis || ''}>
+                  <td className="px-6 py-4 text-sm text-slate-500 max-w-[200px] truncate" title={resident.diagnosis || ''}>
                     {resident.diagnosis || '-'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-[#4c739a]">
+                  <td className="px-6 py-4 text-sm text-slate-500">
                     {formatDate(resident.admission_date)}
                   </td>
                   <td className="px-6 py-4">
@@ -427,36 +435,36 @@ export function Residents() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-[#4c739a]">Gender</p>
-                <p className="font-medium text-[#0d141b] capitalize">{selectedResident.gender}</p>
+                <p className="text-sm text-slate-500">Gender</p>
+                <p className="font-medium text-slate-900 capitalize">{selectedResident.gender}</p>
               </div>
               <div>
-                <p className="text-sm text-[#4c739a]">Payor</p>
-                <p className="font-medium text-[#0d141b]">
+                <p className="text-sm text-slate-500">Payor</p>
+                <p className="font-medium text-slate-900">
                   {getPayorLabel(selectedResident.payor)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-[#4c739a]">Admission Date</p>
-                <p className="font-medium text-[#0d141b]">{formatDate(selectedResident.admission_date)}</p>
+                <p className="text-sm text-slate-500">Admission Date</p>
+                <p className="font-medium text-slate-900">{formatDate(selectedResident.admission_date)}</p>
               </div>
               <div>
-                <p className="text-sm text-[#4c739a]">Status</p>
-                <p className="font-medium text-[#0d141b] capitalize">{selectedResident.status}</p>
+                <p className="text-sm text-slate-500">Status</p>
+                <p className="font-medium text-slate-900 capitalize">{selectedResident.status}</p>
               </div>
             </div>
 
             {selectedResident.diagnosis && (
               <div>
-                <p className="text-sm text-[#4c739a]">Diagnosis</p>
-                <p className="font-medium text-[#0d141b]">{selectedResident.diagnosis}</p>
+                <p className="text-sm text-slate-500">Diagnosis</p>
+                <p className="font-medium text-slate-900">{selectedResident.diagnosis}</p>
               </div>
             )}
 
             {selectedResident.notes && (
               <div>
-                <p className="text-sm text-[#4c739a]">Notes</p>
-                <p className="font-medium text-[#0d141b]">{selectedResident.notes}</p>
+                <p className="text-sm text-slate-500">Notes</p>
+                <p className="font-medium text-slate-900">{selectedResident.notes}</p>
               </div>
             )}
 
@@ -468,7 +476,7 @@ export function Residents() {
               </div>
             )}
 
-            <div className="flex flex-wrap gap-2 pt-4 border-t border-[#e7edf3]">
+            <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-200">
               {selectedResident.status === 'active' && (
                 <>
                   <Button onClick={handleEditClick}>
@@ -504,11 +512,11 @@ export function Residents() {
         <div className="space-y-4">
           {!selectedResident?.is_isolation && (
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Isolation Type</label>
+              <label className="block text-sm font-medium text-slate-900 mb-1">Isolation Type</label>
               <select
                 value={isolationType}
                 onChange={(e) => setIsolationType(e.target.value as IsolationType)}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="respiratory">Respiratory</option>
                 <option value="contact">Contact</option>
@@ -518,7 +526,7 @@ export function Residents() {
             </div>
           )}
 
-          <p className="text-sm text-[#4c739a]">
+          <p className="text-sm text-slate-500">
             {selectedResident?.is_isolation
               ? 'Are you sure you want to remove isolation status?'
               : 'This will mark the resident as requiring isolation precautions.'}
@@ -552,22 +560,28 @@ export function Residents() {
           {/* Name Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">First Name *</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="badge" size={16} className="text-slate-400" />
+                First Name *
+              </label>
               <input
                 type="text"
                 value={newResident.first_name}
                 onChange={(e) => setNewResident({ ...newResident, first_name: e.target.value })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
                 placeholder="Enter first name"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Last Name *</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="badge" size={16} className="text-slate-400" />
+                Last Name *
+              </label>
               <input
                 type="text"
                 value={newResident.last_name}
                 onChange={(e) => setNewResident({ ...newResident, last_name: e.target.value })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
                 placeholder="Enter last name"
               />
             </div>
@@ -576,11 +590,14 @@ export function Residents() {
           {/* Gender and Care Level */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Gender *</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="wc" size={16} className="text-slate-400" />
+                Gender *
+              </label>
               <select
                 value={newResident.gender}
                 onChange={(e) => setNewResident({ ...newResident, gender: e.target.value as Gender })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
               >
                 <option value="male">Male</option>
                 <option value="female">Female</option>
@@ -588,11 +605,14 @@ export function Residents() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Payor *</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="payments" size={16} className="text-slate-400" />
+                Payor *
+              </label>
               <select
                 value={newResident.payor}
                 onChange={(e) => setNewResident({ ...newResident, payor: e.target.value as PayorType })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
               >
                 {PAYOR_TYPES.map((payor) => (
                   <option key={payor.value} value={payor.value}>
@@ -605,34 +625,43 @@ export function Residents() {
 
           {/* Admission Date */}
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Admission Date *</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="calendar_today" size={16} className="text-slate-400" />
+              Admission Date *
+            </label>
             <input
               type="date"
               value={newResident.admission_date}
               onChange={(e) => setNewResident({ ...newResident, admission_date: e.target.value })}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
             />
           </div>
 
           {/* Diagnosis */}
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Diagnosis</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="medical_information" size={16} className="text-slate-400" />
+              Diagnosis
+            </label>
             <input
               type="text"
               value={newResident.diagnosis}
               onChange={(e) => setNewResident({ ...newResident, diagnosis: e.target.value })}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
               placeholder="Enter diagnosis (helps with room placement)"
             />
           </div>
 
           {/* Bed Assignment */}
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Assign to Bed</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="bed" size={16} className="text-slate-400" />
+              Assign to Bed
+            </label>
             <select
               value={selectedBedId}
               onChange={(e) => setSelectedBedId(e.target.value)}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
             >
               <option value="">No bed assignment (will remain unassigned)</option>
               {vacantBeds.map((bed) => (
@@ -642,32 +671,35 @@ export function Residents() {
               ))}
             </select>
             {vacantBeds.length === 0 && (
-              <p className="text-xs text-[#4c739a] mt-1">No vacant beds available</p>
+              <p className="text-xs text-slate-500 mt-1">No vacant beds available</p>
             )}
           </div>
 
           {/* Isolation */}
-          <div className="p-4 bg-[#f6f7f8] rounded-lg">
-            <label className="flex items-center gap-3 cursor-pointer">
+          <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-xl border border-amber-200">
+            <label className="flex items-center gap-3 cursor-pointer group">
               <input
                 type="checkbox"
                 checked={newResident.is_isolation}
                 onChange={(e) => setNewResident({ ...newResident, is_isolation: e.target.checked })}
-                className="w-5 h-5 rounded border-[#c4d4e5] text-primary-500 focus:ring-primary-500"
+                className="w-5 h-5 rounded border-slate-300 text-primary-500 focus:ring-primary-500"
               />
               <div>
-                <span className="font-medium text-[#0d141b]">Isolation Required</span>
-                <p className="text-sm text-[#4c739a]">Check if resident requires isolation precautions</p>
+                <span className="font-semibold text-slate-900 group-hover:text-primary-500 transition-colors">Isolation Required</span>
+                <p className="text-sm text-slate-500">Check if resident requires isolation precautions</p>
               </div>
             </label>
 
             {newResident.is_isolation && (
               <div className="mt-4">
-                <label className="block text-sm font-medium text-[#0d141b] mb-1">Isolation Type</label>
+                <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                  <Icon name="warning" size={16} className="text-amber-500" />
+                  Isolation Type
+                </label>
                 <select
                   value={newResident.isolation_type || ''}
                   onChange={(e) => setNewResident({ ...newResident, isolation_type: e.target.value as IsolationType })}
-                  className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                  className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
                 >
                   <option value="">Select type...</option>
                   {ISOLATION_TYPES.map((type) => (
@@ -682,18 +714,21 @@ export function Residents() {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Notes</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="notes" size={16} className="text-slate-400" />
+              Notes
+            </label>
             <textarea
               value={newResident.notes}
               onChange={(e) => setNewResident({ ...newResident, notes: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all resize-none placeholder:text-slate-400"
               placeholder="Add any additional notes about the resident..."
             />
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#e7edf3]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button variant="secondary" onClick={() => setShowAddModal(false)}>
               Cancel
             </Button>
@@ -721,22 +756,28 @@ export function Residents() {
           {/* Name Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">First Name *</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="badge" size={16} className="text-slate-400" />
+                First Name *
+              </label>
               <input
                 type="text"
                 value={editForm.first_name}
                 onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
                 placeholder="Enter first name"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Last Name *</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="badge" size={16} className="text-slate-400" />
+                Last Name *
+              </label>
               <input
                 type="text"
                 value={editForm.last_name}
                 onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
                 placeholder="Enter last name"
               />
             </div>
@@ -745,11 +786,14 @@ export function Residents() {
           {/* Gender and Payor */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Gender *</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="wc" size={16} className="text-slate-400" />
+                Gender *
+              </label>
               <select
                 value={editForm.gender}
                 onChange={(e) => setEditForm({ ...editForm, gender: e.target.value as Gender })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
               >
                 <option value="male">Male</option>
                 <option value="female">Female</option>
@@ -757,11 +801,14 @@ export function Residents() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#0d141b] mb-1">Payor *</label>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="payments" size={16} className="text-slate-400" />
+                Payor *
+              </label>
               <select
                 value={editForm.payor}
                 onChange={(e) => setEditForm({ ...editForm, payor: e.target.value as PayorType })}
-                className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
               >
                 {PAYOR_TYPES.map((payor) => (
                   <option key={payor.value} value={payor.value}>
@@ -774,41 +821,50 @@ export function Residents() {
 
           {/* Admission Date */}
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Admission Date *</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="calendar_today" size={16} className="text-slate-400" />
+              Admission Date *
+            </label>
             <input
               type="date"
               value={editForm.admission_date}
               onChange={(e) => setEditForm({ ...editForm, admission_date: e.target.value })}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
             />
           </div>
 
           {/* Diagnosis */}
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Diagnosis</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="medical_information" size={16} className="text-slate-400" />
+              Diagnosis
+            </label>
             <input
               type="text"
               value={editForm.diagnosis}
               onChange={(e) => setEditForm({ ...editForm, diagnosis: e.target.value })}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
               placeholder="Enter diagnosis (helps with room placement)"
             />
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Notes</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="notes" size={16} className="text-slate-400" />
+              Notes
+            </label>
             <textarea
               value={editForm.notes}
               onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all resize-none placeholder:text-slate-400"
               placeholder="Add any additional notes about the resident..."
             />
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#e7edf3]">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button variant="secondary" onClick={() => setShowEditModal(false)}>
               Cancel
             </Button>

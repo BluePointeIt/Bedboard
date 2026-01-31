@@ -235,38 +235,43 @@ export function Analytics() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-2xl font-bold text-[#0d141b]">Facility Analytics</h1>
-        <p className="text-[#4c739a]">Occupancy tracking, budget analysis, and bed availability</p>
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-xl bg-primary-500/10 flex items-center justify-center">
+          <Icon name="analytics" size={24} className="text-primary-500" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Facility Analytics</h1>
+          <p className="text-slate-500">Occupancy tracking, budget analysis, and bed availability</p>
+        </div>
       </div>
 
       {/* Occupancy Overview */}
-      <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
             <Icon name="analytics" size={20} className="text-primary-500" />
           </div>
           <div>
-            <h2 className="font-semibold text-[#0d141b]">Occupancy Overview</h2>
-            <p className="text-sm text-[#4c739a]">Target vs actual occupancy comparison</p>
+            <h2 className="font-semibold text-slate-900">Occupancy Overview</h2>
+            <p className="text-sm text-slate-500">Target vs actual occupancy comparison</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-[#f6f7f8] rounded-lg p-4 border border-[#e7edf3]">
-            <p className="text-sm text-[#4c739a] mb-1">Total Beds</p>
-            <p className="text-3xl font-bold text-[#0d141b]">{analytics.totalBeds}</p>
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <p className="text-sm text-slate-500 mb-1">Total Beds</p>
+            <p className="text-3xl font-bold text-slate-900">{analytics.totalBeds}</p>
           </div>
-          <div className="bg-[#f6f7f8] rounded-lg p-4 border border-[#e7edf3]">
-            <p className="text-sm text-[#4c739a] mb-1">Occupied</p>
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <p className="text-sm text-slate-500 mb-1">Occupied</p>
             <p className="text-3xl font-bold text-primary-500">{analytics.occupiedBeds}</p>
           </div>
-          <div className="bg-[#f6f7f8] rounded-lg p-4 border border-[#e7edf3]">
-            <p className="text-sm text-[#4c739a] mb-1">Vacant</p>
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <p className="text-sm text-slate-500 mb-1">Vacant</p>
             <p className="text-3xl font-bold text-green-600">{analytics.vacantBeds}</p>
           </div>
-          <div className="bg-[#f6f7f8] rounded-lg p-4 border border-[#e7edf3]">
-            <p className="text-sm text-[#4c739a] mb-1">Out of Service</p>
+          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <p className="text-sm text-slate-500 mb-1">Out of Service</p>
             <p className="text-3xl font-bold text-slate-500">{analytics.outOfServiceBeds}</p>
           </div>
         </div>
@@ -329,7 +334,7 @@ export function Analytics() {
         </div>
 
         {/* Variance Summary */}
-        <div className="mt-6 p-4 bg-[#f6f7f8] rounded-lg border border-[#e7edf3]">
+        <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Icon
@@ -337,7 +342,7 @@ export function Analytics() {
                 size={24}
                 className={analytics.actualOccupancyRate >= analytics.targetOccupancyRate ? 'text-green-500' : 'text-amber-500'}
               />
-              <span className="font-medium text-[#0d141b]">Occupancy Variance</span>
+              <span className="font-medium text-slate-900">Occupancy Variance</span>
             </div>
             <div className={`text-xl font-bold ${
               analytics.actualOccupancyRate >= analytics.targetOccupancyRate ? 'text-green-600' : 'text-amber-600'
@@ -350,26 +355,26 @@ export function Analytics() {
       </div>
 
       {/* Case-Mix Budget vs Actual */}
-      <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
             <Icon name="payments" size={20} className="text-green-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-[#0d141b]">Case-Mix Analysis</h2>
-            <p className="text-sm text-[#4c739a]">Budget vs actual residents by payor type</p>
+            <h2 className="font-semibold text-slate-900">Case-Mix Analysis</h2>
+            <p className="text-sm text-slate-500">Budget vs actual residents by payor type</p>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[#e7edf3]">
-                <th className="text-left py-3 px-4 text-sm font-semibold text-[#0d141b]">Payor Type</th>
-                <th className="text-center py-3 px-4 text-sm font-semibold text-[#0d141b]">Budget</th>
-                <th className="text-center py-3 px-4 text-sm font-semibold text-[#0d141b]">Actual</th>
-                <th className="text-center py-3 px-4 text-sm font-semibold text-[#0d141b]">Variance</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-[#0d141b] w-48">Progress</th>
+              <tr className="border-b border-slate-200">
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-900">Payor Type</th>
+                <th className="text-center py-3 px-4 text-sm font-semibold text-slate-900">Budget</th>
+                <th className="text-center py-3 px-4 text-sm font-semibold text-slate-900">Actual</th>
+                <th className="text-center py-3 px-4 text-sm font-semibold text-slate-900">Variance</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-900 w-48">Progress</th>
               </tr>
             </thead>
             <tbody>
@@ -380,15 +385,15 @@ export function Analytics() {
                 const progress = budget > 0 ? Math.min((actual / budget) * 100, 150) : (actual > 0 ? 100 : 0);
 
                 return (
-                  <tr key={payor} className="border-b border-[#e7edf3] hover:bg-[#f6f7f8]">
+                  <tr key={payor} className="border-b border-slate-200 hover:bg-slate-50">
                     <td className="py-3 px-4">
-                      <span className="font-medium text-[#0d141b]">{PAYOR_LABELS[payor]}</span>
+                      <span className="font-medium text-slate-900">{PAYOR_LABELS[payor]}</span>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className="text-[#4c739a] font-medium">{budget}</span>
+                      <span className="text-slate-500 font-medium">{budget}</span>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <span className="font-bold text-[#0d141b]">{actual}</span>
+                      <span className="font-bold text-slate-900">{actual}</span>
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className={`inline-flex items-center gap-1 ${getVarianceColor(variance)}`}>
@@ -398,7 +403,7 @@ export function Analytics() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-[#e7edf3] rounded-full overflow-hidden">
+                        <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
                           <div
                             className={`h-full transition-all duration-300 ${
                               progress >= 100 ? 'bg-green-500' : progress >= 75 ? 'bg-amber-500' : 'bg-red-400'
@@ -406,7 +411,7 @@ export function Analytics() {
                             style={{ width: `${Math.min(progress, 100)}%` }}
                           />
                         </div>
-                        <span className="text-xs font-medium text-[#4c739a] w-12 text-right">
+                        <span className="text-xs font-medium text-slate-500 w-12 text-right">
                           {budget > 0 ? `${Math.round((actual / budget) * 100)}%` : '-'}
                         </span>
                       </div>
@@ -416,9 +421,9 @@ export function Analytics() {
               })}
             </tbody>
             <tfoot>
-              <tr className="bg-[#f6f7f8]">
-                <td className="py-3 px-4 font-bold text-[#0d141b]">Total</td>
-                <td className="py-3 px-4 text-center font-bold text-[#0d141b]">{analytics.caseMixTotal}</td>
+              <tr className="bg-slate-50">
+                <td className="py-3 px-4 font-bold text-slate-900">Total</td>
+                <td className="py-3 px-4 text-center font-bold text-slate-900">{analytics.caseMixTotal}</td>
                 <td className="py-3 px-4 text-center font-bold text-primary-500">{analytics.occupiedBeds}</td>
                 <td className="py-3 px-4 text-center">
                   <div className={`inline-flex items-center gap-1 font-bold ${getVarianceColor(analytics.occupiedBeds - analytics.caseMixTotal)}`}>
@@ -429,7 +434,7 @@ export function Analytics() {
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-[#e7edf3] rounded-full overflow-hidden">
+                    <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${
                           analytics.occupiedBeds >= analytics.caseMixTotal ? 'bg-green-500' : 'bg-amber-500'
@@ -437,7 +442,7 @@ export function Analytics() {
                         style={{ width: `${analytics.caseMixTotal > 0 ? Math.min((analytics.occupiedBeds / analytics.caseMixTotal) * 100, 100) : 0}%` }}
                       />
                     </div>
-                    <span className="text-xs font-bold text-[#0d141b] w-12 text-right">
+                    <span className="text-xs font-bold text-slate-900 w-12 text-right">
                       {analytics.caseMixTotal > 0 ? `${Math.round((analytics.occupiedBeds / analytics.caseMixTotal) * 100)}%` : '-'}
                     </span>
                   </div>
@@ -449,14 +454,14 @@ export function Analytics() {
       </div>
 
       {/* Gender-Specific Bed Availability */}
-      <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
             <Icon name="wc" size={20} className="text-violet-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-[#0d141b]">Gender-Specific Availability</h2>
-            <p className="text-sm text-[#4c739a]">Available beds considering room and shared bathroom constraints</p>
+            <h2 className="font-semibold text-slate-900">Gender-Specific Availability</h2>
+            <p className="text-sm text-slate-500">Available beds considering room and shared bathroom constraints</p>
           </div>
         </div>
 
@@ -511,11 +516,11 @@ export function Analytics() {
         </div>
 
         {/* Explanation */}
-        <div className="mt-6 p-4 bg-[#f6f7f8] rounded-lg border border-[#e7edf3]">
+        <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
           <div className="flex items-start gap-3">
-            <Icon name="info" size={20} className="text-[#4c739a] mt-0.5" />
-            <div className="text-sm text-[#4c739a]">
-              <p className="font-medium text-[#0d141b] mb-1">How gender availability is calculated:</p>
+            <Icon name="info" size={20} className="text-slate-500 mt-0.5" />
+            <div className="text-sm text-slate-500">
+              <p className="font-medium text-slate-900 mb-1">How gender availability is calculated:</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>Semi-private and triple rooms cannot have mixed genders</li>
                 <li>Rooms sharing a bathroom cannot have opposite genders across the bathroom group</li>
@@ -528,14 +533,14 @@ export function Analytics() {
       </div>
 
       {/* Wing-by-Wing Summary */}
-      <div className="bg-white rounded-xl border border-[#e7edf3] p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
             <Icon name="domain" size={20} className="text-amber-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-[#0d141b]">Wing Summary</h2>
-            <p className="text-sm text-[#4c739a]">Occupancy breakdown by wing</p>
+            <h2 className="font-semibold text-slate-900">Wing Summary</h2>
+            <p className="text-sm text-slate-500">Occupancy breakdown by wing</p>
           </div>
         </div>
 
@@ -547,16 +552,16 @@ export function Analytics() {
             const wingRate = wingTotal > 0 ? Math.round((wingOccupied / wingTotal) * 100) : 0;
 
             return (
-              <div key={wing.id} className="bg-[#f6f7f8] rounded-lg p-4 border border-[#e7edf3]">
+              <div key={wing.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-[#0d141b]">{wing.name}</h3>
+                  <h3 className="font-medium text-slate-900">{wing.name}</h3>
                   <span className={`text-sm font-bold ${
                     wingRate >= 90 ? 'text-green-600' : wingRate >= 70 ? 'text-amber-600' : 'text-red-500'
                   }`}>
                     {wingRate}%
                   </span>
                 </div>
-                <div className="h-2 bg-[#e7edf3] rounded-full overflow-hidden mb-2">
+                <div className="h-2 bg-slate-200 rounded-full overflow-hidden mb-2">
                   <div
                     className={`h-full transition-all duration-300 ${
                       wingRate >= 90 ? 'bg-green-500' : wingRate >= 70 ? 'bg-amber-500' : 'bg-red-400'
@@ -564,7 +569,7 @@ export function Analytics() {
                     style={{ width: `${wingRate}%` }}
                   />
                 </div>
-                <p className="text-xs text-[#4c739a]">
+                <p className="text-xs text-slate-500">
                   {wingOccupied} of {wingTotal} beds occupied
                 </p>
               </div>

@@ -185,7 +185,15 @@ export function Dashboard() {
 
       {/* Filter Legend & Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-[#0d141b]">{headerTitle}</h2>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
+            <Icon name="grid_view" size={20} className="text-primary-500" />
+          </div>
+          <div>
+            <h2 className="font-bold text-slate-900">{headerTitle}</h2>
+            <p className="text-sm text-slate-500">Manage bed assignments and status</p>
+          </div>
+        </div>
         <FilterLegend />
       </div>
 
@@ -195,7 +203,7 @@ export function Dashboard() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
         </div>
       ) : beds.length === 0 ? (
-        <div className="text-center py-12 text-[#4c739a]">
+        <div className="text-center py-12 text-slate-500">
           No beds found matching your criteria
         </div>
       ) : (
@@ -217,8 +225,8 @@ export function Dashboard() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-[#4c739a]">Wing</p>
-                <p className="font-medium text-[#0d141b]">{selectedBed.room?.wing?.name}</p>
+                <p className="text-sm text-slate-500">Wing</p>
+                <p className="font-medium text-slate-900">{selectedBed.room?.wing?.name}</p>
               </div>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -234,12 +242,12 @@ export function Dashboard() {
             </div>
 
             {selectedBed.resident && (
-              <div className="p-4 bg-[#f6f7f8] rounded-lg">
-                <p className="text-sm text-[#4c739a] mb-2">Current Resident</p>
-                <p className="font-semibold text-[#0d141b]">
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-sm text-slate-500 mb-2">Current Resident</p>
+                <p className="font-semibold text-slate-900">
                   {selectedBed.resident.first_name} {selectedBed.resident.last_name}
                 </p>
-                <p className="text-sm text-[#4c739a]">
+                <p className="text-sm text-slate-500">
                   Payor: {selectedBed.resident.payor.replace('_', ' ')}
                 </p>
                 {selectedBed.resident.is_isolation && (
@@ -250,7 +258,7 @@ export function Dashboard() {
               </div>
             )}
 
-            <div className="flex flex-wrap gap-2 pt-4 border-t border-[#e7edf3]">
+            <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-200">
               {selectedBed.status === 'vacant' && (
                 <Button onClick={() => setShowAssignModal(true)}>Assign Resident</Button>
               )}
@@ -315,11 +323,14 @@ export function Dashboard() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Select Resident</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="person" size={16} className="text-slate-400" />
+              Select Resident
+            </label>
             <select
               value={selectedResidentId}
               onChange={(e) => setSelectedResidentId(e.target.value)}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
             >
               <option value="">Choose a resident...</option>
               {unassignedResidents.map((resident) => {
@@ -338,7 +349,7 @@ export function Dashboard() {
               })}
             </select>
             {unassignedResidents.length === 0 && (
-              <p className="text-sm text-[#4c739a] mt-2">
+              <p className="text-sm text-slate-500 mt-2">
                 No unassigned residents available. Create a new admission first.
               </p>
             )}
@@ -384,15 +395,15 @@ export function Dashboard() {
       >
         <div className="space-y-4">
           {selectedBed?.resident && (
-            <div className="p-4 bg-[#f6f7f8] rounded-lg">
-              <p className="text-sm text-[#4c739a] mb-1">Moving Resident</p>
-              <p className="font-semibold text-[#0d141b]">
+            <div className="p-4 bg-slate-50 rounded-lg">
+              <p className="text-sm text-slate-500 mb-1">Moving Resident</p>
+              <p className="font-semibold text-slate-900">
                 {selectedBed.resident.first_name} {selectedBed.resident.last_name}
-                <span className="ml-2 text-xs font-normal text-[#4c739a]">
+                <span className="ml-2 text-xs font-normal text-slate-500">
                   ({selectedBed.resident.gender === 'male' ? 'Male' : selectedBed.resident.gender === 'female' ? 'Female' : 'Other'})
                 </span>
               </p>
-              <p className="text-sm text-[#4c739a]">
+              <p className="text-sm text-slate-500">
                 From: {selectedBed.room?.wing?.name} - Room {selectedBed.room?.room_number} - Bed {selectedBed.bed_letter}
               </p>
             </div>
@@ -407,11 +418,14 @@ export function Dashboard() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[#0d141b] mb-1">Select New Bed</label>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="bed" size={16} className="text-slate-400" />
+              Select New Bed
+            </label>
             <select
               value={selectedTargetBedId}
               onChange={(e) => setSelectedTargetBedId(e.target.value)}
-              className="w-full px-3 py-2 border border-[#e7edf3] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
             >
               <option value="">Choose a vacant bed...</option>
               {vacantBeds.map((bed) => (
@@ -421,11 +435,11 @@ export function Dashboard() {
               ))}
             </select>
             {vacantBeds.length === 0 && (
-              <p className="text-sm text-[#4c739a] mt-2">
+              <p className="text-sm text-slate-500 mt-2">
                 No vacant beds available to move to.
               </p>
             )}
-            <p className="text-xs text-[#4c739a] mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               Note: Semi-private rooms and shared bathrooms require same-gender residents.
             </p>
           </div>
