@@ -235,8 +235,52 @@ export function Dashboard() {
     };
   }, [beds]);
 
+  // Calculate total occupancy
+  const totalBeds = beds.length;
+  const occupiedBeds = beds.filter(b => b.status === 'occupied').length;
+  const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
+
   return (
     <div className="space-y-6">
+      {/* Total Occupancy Rate */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <Icon name="monitoring" size={20} className="text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-slate-900">Total Occupancy</h2>
+              <p className="text-sm text-slate-500">
+                {selectedWing ? selectedWing.name : 'All Wings'} • {occupiedBeds} of {totalBeds} beds occupied
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className={`text-3xl font-bold ${
+              occupancyRate >= 90 ? 'text-emerald-600' : occupancyRate >= 70 ? 'text-amber-600' : 'text-red-500'
+            }`}>
+              {occupancyRate}%
+            </p>
+          </div>
+        </div>
+        <div className="h-4 bg-slate-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-500 rounded-full ${
+              occupancyRate >= 90 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' :
+              occupancyRate >= 70 ? 'bg-gradient-to-r from-amber-400 to-amber-500' :
+              'bg-gradient-to-r from-red-400 to-red-500'
+            }`}
+            style={{ width: `${occupancyRate}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-2 text-xs text-slate-400">
+          <span>0%</span>
+          <span>50%</span>
+          <span>100%</span>
+        </div>
+      </div>
+
       {/* Gender-Specific Bed Availability */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <div className="flex items-center gap-3 mb-6">

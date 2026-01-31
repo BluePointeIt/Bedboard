@@ -45,6 +45,7 @@ export interface ReportFilters {
   wing?: string;
   statuses?: string[];
   isolation?: string;
+  genders?: string[];
   diagnoses?: string[];
   dateFrom?: string;
   dateTo?: string;
@@ -105,6 +106,10 @@ export function exportToPDF<T extends Record<string, unknown>>(
 
     if (filters.diagnoses && filters.diagnoses.length > 0) {
       filterLines.push(`Diagnosis: ${filters.diagnoses.join(', ')}`);
+    }
+
+    if (filters.genders && filters.genders.length > 0 && filters.genders.length < 2) {
+      filterLines.push(`Gender: ${filters.genders.map((g) => g.charAt(0).toUpperCase() + g.slice(1)).join(', ')}`);
     }
 
     if (filters.dateFrom || filters.dateTo) {

@@ -48,6 +48,21 @@ export function Reports() {
   // Isolation filter for custom reports
   const [isolationFilter, setIsolationFilter] = useState<'all' | 'isolation' | 'non-isolation'>('all');
 
+  // Gender filter for custom reports
+  const [selectedGenders, setSelectedGenders] = useState<Set<string>>(new Set(['male', 'female']));
+
+  const toggleGender = (gender: string) => {
+    setSelectedGenders((prev) => {
+      const next = new Set(prev);
+      if (next.has(gender)) {
+        next.delete(gender);
+      } else {
+        next.add(gender);
+      }
+      return next;
+    });
+  };
+
   // Diagnosis filter for custom reports
   const [selectedDiagnoses, setSelectedDiagnoses] = useState<Set<string>>(new Set());
   const [diagnosisDropdownOpen, setDiagnosisDropdownOpen] = useState(false);
@@ -82,6 +97,7 @@ export function Reports() {
     { key: 'room', label: 'Room/Bed', header: 'Room/Bed', enabled: true },
     { key: 'wing', label: 'Wing', header: 'Wing', enabled: true },
     { key: 'status', label: 'Status', header: 'Status', enabled: true },
+    { key: 'gender', label: 'Gender', header: 'Gender', enabled: false },
     { key: 'diagnosis', label: 'Diagnosis', header: 'Diagnosis', enabled: true },
     { key: 'isolation', label: 'Isolation', header: 'Isolation', enabled: false },
     { key: 'payor', label: 'Payor Type', header: 'Payor', enabled: false },
@@ -173,6 +189,11 @@ export function Reports() {
           if (!selectedDiagnoses.has(b.resident.diagnosis)) return false;
         }
 
+        // Apply gender filter (only for occupied beds with residents)
+        if (selectedGenders.size < 2 && b.status === 'occupied' && b.resident) {
+          if (!selectedGenders.has(b.resident.gender || '')) return false;
+        }
+
         // Apply date range filter only for occupied beds with residents
         if (b.status === 'occupied' && b.resident && (dateFrom || dateTo)) {
           const admissionDate = b.resident.admission_date;
@@ -199,6 +220,9 @@ export function Reports() {
         room: `${bed.room?.room_number}${bed.bed_letter}`,
         wing: bed.room?.wing?.name || '',
         status: bed.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        gender: bed.resident?.gender
+          ? bed.resident.gender.charAt(0).toUpperCase() + bed.resident.gender.slice(1)
+          : '-',
         diagnosis: bed.resident?.diagnosis || '-',
         isolation: bed.resident?.is_isolation
           ? bed.resident.isolation_type
@@ -212,7 +236,7 @@ export function Reports() {
           ? formatDate(bed.resident.admission_date)
           : '-',
       }));
-  }, [beds, dateFrom, dateTo, selectedStatuses, isolationFilter, selectedDiagnoses]);
+  }, [beds, dateFrom, dateTo, selectedStatuses, isolationFilter, selectedDiagnoses, selectedGenders]);
 
   // Get enabled columns for custom report
   const enabledColumns: ColumnDef[] = customFields
@@ -255,6 +279,7 @@ export function Reports() {
             : isolationFilter === 'isolation'
             ? 'Isolation Only'
             : 'Non-Isolation Only',
+        genders: Array.from(selectedGenders),
         diagnoses: Array.from(selectedDiagnoses),
         dateFrom: dateFrom ? formatDate(dateFrom) : undefined,
         dateTo: dateTo ? formatDate(dateTo) : undefined,
@@ -576,6 +601,44 @@ export function Reports() {
                 Please select at least one status to generate a report.
               </p>
             )}
+          </div>
+
+          {/* Gender Filter */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h3 className="font-semibold text-slate-900 mb-4">Filter by Gender</h3>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => toggleGender('male')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  selectedGenders.has('male')
+                    ? 'bg-primary-50 border-primary-300 text-primary-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={selectedGenders.has('male') ? 'check_box' : 'check_box_outline_blank'}
+                  size={18}
+                />
+                Male
+              </button>
+              <button
+                onClick={() => toggleGender('female')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  selectedGenders.has('female')
+                    ? 'bg-pink-50 border-pink-300 text-pink-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={selectedGenders.has('female') ? 'check_box' : 'check_box_outline_blank'}
+                  size={18}
+                />
+                Female
+              </button>
+            </div>
+            <p className="mt-3 text-sm text-slate-500">
+              Applies to occupied beds with residents only.
+            </p>
           </div>
 
           {/* Isolation Filter */}
