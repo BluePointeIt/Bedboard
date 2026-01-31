@@ -239,6 +239,62 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Gender-Specific Bed Availability */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+            <Icon name="wc" size={20} className="text-violet-600" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-slate-900">Gender-Specific Availability</h2>
+            <p className="text-sm text-slate-500">
+              {selectedWing ? `Available beds in ${selectedWing.name}` : 'Available beds across all wings'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Male Available */}
+          <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl p-5 border border-primary-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
+                <Icon name="male" size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-primary-700">Male Beds</p>
+                <p className="text-2xl font-bold text-primary-600">{genderAvailability.male}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Female Available */}
+          <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-xl p-5 border border-pink-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center">
+                <Icon name="female" size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-pink-700">Female Beds</p>
+                <p className="text-2xl font-bold text-pink-600">{genderAvailability.female}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Either Gender */}
+          <div className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 rounded-xl p-5 border border-violet-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center">
+                <Icon name="group" size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-violet-700">Open to Either</p>
+                <p className="text-2xl font-bold text-violet-600">{genderAvailability.either}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Dashboard Stats */}
       <div className="flex flex-wrap gap-4">
         <StatsCard
@@ -309,62 +365,6 @@ export function Dashboard() {
           ))}
         </BedGrid>
       )}
-
-      {/* Gender-Specific Bed Availability */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-            <Icon name="wc" size={20} className="text-violet-600" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-slate-900">Gender-Specific Availability</h2>
-            <p className="text-sm text-slate-500">
-              {selectedWing ? `Available beds in ${selectedWing.name}` : 'Available beds across all wings'}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Male Available */}
-          <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl p-5 border border-primary-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
-                <Icon name="male" size={24} className="text-white" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-primary-700">Male Beds</p>
-                <p className="text-2xl font-bold text-primary-600">{genderAvailability.male}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Female Available */}
-          <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-xl p-5 border border-pink-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center">
-                <Icon name="female" size={24} className="text-white" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-pink-700">Female Beds</p>
-                <p className="text-2xl font-bold text-pink-600">{genderAvailability.female}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Either Gender */}
-          <div className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 rounded-xl p-5 border border-violet-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center">
-                <Icon name="group" size={24} className="text-white" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-violet-700">Open to Either</p>
-                <p className="text-2xl font-bold text-violet-600">{genderAvailability.either}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Wing Summary - Only show when viewing all wings */}
       {!selectedWingId && wings.length > 0 && (
