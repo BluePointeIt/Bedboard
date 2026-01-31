@@ -1,8 +1,7 @@
 import { useOutletContext } from 'react-router-dom';
-import { BedCard, BedGrid, FilterLegend, StatsCard, Modal, Button, Icon } from '../components';
+import { BedCard, BedGrid, FilterLegend, Modal, Button, Icon } from '../components';
 import { useBeds, useBedActions } from '../hooks/useBeds';
 import type { GenderCompatibilityResult } from '../hooks/useBeds';
-import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useUnassignedResidents } from '../hooks/useResidents';
 import { useState, useEffect, useMemo } from 'react';
 import type { BedWithDetails } from '../components/BedCard';
@@ -28,7 +27,6 @@ export function Dashboard() {
     wing_id: selectedWingId,
     search: searchQuery || undefined,
   });
-  const { stats } = useDashboardStats(selectedWingId);
   const { residents: unassignedResidents } = useUnassignedResidents();
   const { updateBedStatus, assignResident, unassignResident, checkGenderCompatibility, getRequiredGenderForBed } = useBedActions();
 
@@ -295,77 +293,6 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Dashboard Stats */}
-      <div className="flex flex-wrap gap-4">
-        <StatsCard
-          title="% Occupied"
-          value={`${stats.occupancy_rate}%`}
-          change={stats.occupancy_rate >= 90 ? 'High' : stats.occupancy_rate >= 70 ? 'Normal' : 'Low'}
-          changeType={stats.occupancy_rate >= 90 ? 'negative' : stats.occupancy_rate >= 70 ? 'neutral' : 'positive'}
-        />
-        <StatsCard
-          title="Male Beds Occupied"
-          value={stats.male_occupied}
-          change={`${stats.occupied_beds > 0 ? Math.round((stats.male_occupied / stats.occupied_beds) * 100) : 0}%`}
-          variant="male"
-        />
-        <StatsCard
-          title="Female Beds Occupied"
-          value={stats.female_occupied}
-          change={`${stats.occupied_beds > 0 ? Math.round((stats.female_occupied / stats.occupied_beds) * 100) : 0}%`}
-          variant="female"
-        />
-        <StatsCard
-          title="Isolation Beds Occupied"
-          value={stats.isolation_count}
-          change="Active"
-          variant="isolation"
-        />
-        <StatsCard
-          title="Available Beds"
-          value={stats.available_beds}
-          change={stats.available_beds > 5 ? 'Good' : 'Low'}
-          changeType={stats.available_beds > 5 ? 'positive' : 'negative'}
-        />
-        <StatsCard
-          title="Out of Service"
-          value={stats.out_of_service_count}
-          change="Maintenance"
-          variant="outOfService"
-        />
-      </div>
-
-      {/* Filter Legend & Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
-            <Icon name="grid_view" size={20} className="text-primary-500" />
-          </div>
-          <div>
-            <h2 className="font-bold text-slate-900">{headerTitle}</h2>
-            <p className="text-sm text-slate-500">Manage bed assignments and status</p>
-          </div>
-        </div>
-        <FilterLegend />
-      </div>
-
-      {/* Beds Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
-        </div>
-      ) : beds.length === 0 ? (
-        <div className="text-center py-12 text-slate-500">
-          No beds found matching your criteria
-        </div>
-      ) : (
-        <BedGrid>
-          {beds.map((bed) => (
-            <BedCard key={bed.id} bed={bed} onClick={() => setSelectedBed(bed)} />
-          ))}
-        </BedGrid>
-      )}
-
       {/* Wing Summary - Only show when viewing all wings */}
       {!selectedWingId && wings.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -412,6 +339,40 @@ export function Dashboard() {
             })}
           </div>
         </div>
+      )}
+
+      {/* Spacer before Unit Overview */}
+      <div className="pt-4" />
+
+      {/* Filter Legend & Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
+            <Icon name="grid_view" size={20} className="text-primary-500" />
+          </div>
+          <div>
+            <h2 className="font-bold text-slate-900">{headerTitle}</h2>
+            <p className="text-sm text-slate-500">Manage bed assignments and status</p>
+          </div>
+        </div>
+        <FilterLegend />
+      </div>
+
+      {/* Beds Grid */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500" />
+        </div>
+      ) : beds.length === 0 ? (
+        <div className="text-center py-12 text-slate-500">
+          No beds found matching your criteria
+        </div>
+      ) : (
+        <BedGrid>
+          {beds.map((bed) => (
+            <BedCard key={bed.id} bed={bed} onClick={() => setSelectedBed(bed)} />
+          ))}
+        </BedGrid>
       )}
 
       {/* Bed Detail Modal */}
