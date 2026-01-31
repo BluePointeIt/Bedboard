@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useResidents, type CreateResidentInput } from '../hooks/useResidents';
 import { useBeds, useBedActions } from '../hooks/useBeds';
-import { Icon, Button, Modal } from '../components';
+import { Icon, Button, Modal, DiagnosisSelect } from '../components';
 import type { Resident, IsolationType, PayorType, Gender } from '../types';
 
 const PAYOR_TYPES: { value: PayorType; label: string }[] = [
@@ -689,12 +689,9 @@ export function Residents() {
               <Icon name="medical_information" size={16} className="text-slate-400" />
               Diagnosis
             </label>
-            <input
-              type="text"
-              value={newResident.diagnosis}
-              onChange={(e) => setNewResident({ ...newResident, diagnosis: e.target.value })}
-              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
-              placeholder="Enter diagnosis (helps with room placement)"
+            <DiagnosisSelect
+              value={newResident.diagnosis || ''}
+              onChange={(value) => setNewResident({ ...newResident, diagnosis: value })}
             />
           </div>
 
@@ -899,12 +896,9 @@ export function Residents() {
               <Icon name="medical_information" size={16} className="text-slate-400" />
               Diagnosis
             </label>
-            <input
-              type="text"
+            <DiagnosisSelect
               value={editForm.diagnosis}
-              onChange={(e) => setEditForm({ ...editForm, diagnosis: e.target.value })}
-              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
-              placeholder="Enter diagnosis (helps with room placement)"
+              onChange={(value) => setEditForm({ ...editForm, diagnosis: value })}
             />
           </div>
 

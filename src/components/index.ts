@@ -2,6 +2,7 @@ export { AppLayout } from './AppLayout';
 export { BedCard } from './BedCard';
 export { BedGrid } from './BedGrid';
 export { Button } from './Button';
+export { DiagnosisSelect } from './DiagnosisSelect';
 export { FilterLegend } from './FilterLegend';
 export { Icon } from './Icon';
 export { Modal } from './Modal';
