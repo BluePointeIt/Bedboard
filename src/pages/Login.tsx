@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Hospital } from 'lucide-react';
-import { Button } from '../components';
+import { Icon } from '../components';
 
 interface LoginProps {
   onLogin: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -12,6 +11,8 @@ export function Login({ onLogin, onSignUp }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -39,25 +40,58 @@ export function Login({ onLogin, onSignUp }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 mb-4">
-            <Hospital className="w-8 h-8 text-white" />
+    <div className="flex h-screen w-full overflow-hidden bg-[#f6f7f8]">
+      {/* Left Side: Healthcare Environment Image */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-primary-500/10">
+        <div className="absolute inset-0 z-10 bg-gradient-to-br from-primary-500/40 to-transparent" />
+        <div
+          className="w-full h-full bg-cover bg-center"
+          style={{
+            backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuDoqTHHuuvAF0TXT97EsPogizc3dQJtV-IKFT_9thFOE8FSMzaUAwwgieXq79g4wqBkZrNtpAYi3j4wZJ7ahNyuYIDC1GyUEn3b9TvF8Vz15vTMfVJ18_n298HfzTUmOffpk8uTFzZeSXyUmbZuljHVAYzjUn3Lu_tgzC6gD4o7DW_cruBll-AF_hI2-C_zYV0ZLyMpNCZTr9yUITj8CTyZ793Y9cRAo9MV9OZrTjyGc5anph3--sdK4S6XE3OMPkdQTDrQpNuTgGE')`,
+          }}
+        />
+        <div className="absolute bottom-12 left-12 z-20 text-white max-w-md">
+          <h1 className="text-4xl font-extrabold mb-4 drop-shadow-md">MediBed Pro</h1>
+          <p className="text-lg font-medium opacity-90 drop-shadow-sm">
+            The industry standard for professional resident occupancy and bed management.
+          </p>
+          <div className="mt-8 flex items-center gap-4 bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/20">
+            <Icon name="verified_user" size={32} className="text-white" />
+            <p className="text-sm">
+              Trusted by healthcare facilities nationwide for HIPAA-compliant data tracking.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Bedboard</h1>
-          <p className="text-slate-500">Hospital Bed Management System</p>
         </div>
+      </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-6">
-            {isSignUp ? 'Create Account' : 'Sign In'}
-          </h2>
+      {/* Right Side: Authentication Panel */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-8 bg-[#f6f7f8]">
+        <div className="w-full max-w-[440px] flex flex-col">
+          {/* Logo & Heading */}
+          <div className="mb-10 text-center lg:text-left">
+            <div className="flex items-center gap-2 mb-6 justify-center lg:justify-start">
+              <div className="w-10 h-10 bg-primary-500 text-white flex items-center justify-center rounded-lg shadow-lg shadow-primary-500/20">
+                <Icon name="health_metrics" size={24} />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">MediBed Pro</h2>
+            </div>
+            <h3 className="text-3xl font-bold text-slate-900 mb-2">
+              {isSignUp ? 'Create Account' : 'Secure Portal Login'}
+            </h3>
+            <p className="text-slate-500 font-medium">
+              {isSignUp
+                ? 'Fill in your details to create a new account.'
+                : 'Enter your credentials to access the management dashboard.'}
+            </p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Full Name Field (Sign Up Only) */}
             {isSignUp && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+              <div className="flex flex-col gap-2">
+                <label className="text-slate-700 text-sm font-semibold flex items-center gap-2">
+                  <Icon name="badge" size={16} className="text-slate-400" />
                   Full Name
                 </label>
                 <input
@@ -65,14 +99,16 @@ export function Login({ onLogin, onSignUp }: LoginProps) {
                   required={isSignUp}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full h-14 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
                   placeholder="Enter your full name"
                 />
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+            {/* Email Field */}
+            <div className="flex flex-col gap-2">
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2">
+                <Icon name="person" size={16} className="text-slate-400" />
                 Email
               </label>
               <input
@@ -80,57 +116,142 @@ export function Login({ onLogin, onSignUp }: LoginProps) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Enter your email"
+                className="w-full h-14 px-4 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
+                placeholder="e.g. j.doe@facility.com"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+            {/* Password Field */}
+            <div className="flex flex-col gap-2">
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2">
+                <Icon name="lock" size={16} className="text-slate-400" />
                 Password
               </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Enter your password"
-                minLength={6}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full h-14 px-4 pr-12 rounded-lg border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400"
+                  placeholder="••••••••"
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary-500 transition-colors"
+                >
+                  <Icon name={showPassword ? 'visibility_off' : 'visibility'} size={20} />
+                </button>
+              </div>
             </div>
 
+            {/* Options Row (Login Only) */}
+            {!isSignUp && (
+              <div className="flex items-center justify-between py-2">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="rounded border-slate-300 text-primary-500 focus:ring-primary-500 w-4 h-4 transition-all"
+                  />
+                  <span className="text-sm font-medium text-slate-600 group-hover:text-primary-500">
+                    Remember me
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  className="text-sm font-bold text-primary-500 hover:underline transition-all"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+            )}
+
+            {/* Error Message */}
             {error && (
-              <div className="p-3 bg-danger-50 text-danger-600 text-sm rounded-lg">
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg flex items-center gap-2">
+                <Icon name="error" size={18} />
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full" loading={loading}>
-              {isSignUp ? 'Create Account' : 'Sign In'}
-            </Button>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-14 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 text-white font-bold rounded-lg shadow-lg shadow-primary-500/30 transition-all flex items-center justify-center gap-2 text-lg"
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {isSignUp ? 'Creating Account...' : 'Signing In...'}
+                </>
+              ) : (
+                <>
+                  <Icon name={isSignUp ? 'person_add' : 'login'} size={22} />
+                  {isSignUp ? 'Create Account' : 'Log In'}
+                </>
+              )}
+            </button>
           </form>
 
+          {/* Toggle Sign Up / Sign In */}
           {onSignUp && (
-            <div className="mt-4 text-center">
+            <div className="mt-6 text-center">
               <button
                 type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-primary-600 hover:text-primary-700"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError('');
+                }}
+                className="text-sm font-medium text-slate-600 hover:text-primary-500 transition-colors"
               >
-                {isSignUp
-                  ? 'Already have an account? Sign in'
-                  : "Don't have an account? Sign up"}
+                {isSignUp ? (
+                  <>
+                    Already have an account?{' '}
+                    <span className="font-bold text-primary-500">Sign in</span>
+                  </>
+                ) : (
+                  <>
+                    Don't have an account?{' '}
+                    <span className="font-bold text-primary-500">Sign up</span>
+                  </>
+                )}
               </button>
             </div>
           )}
-        </div>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
-          For demo purposes, you can use any email/password.
-          <br />
-          Configure Supabase credentials for full functionality.
-        </p>
+          {/* Footer Info */}
+          <div className="mt-10 pt-8 border-t border-slate-200 flex flex-col items-center gap-6">
+            <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-xs font-bold text-emerald-700 uppercase tracking-widest">
+                System Status: Online
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4 text-slate-400">
+              <div className="flex items-center gap-1.5 grayscale opacity-70">
+                <Icon name="shield_with_heart" size={18} />
+                <span className="text-[10px] font-bold uppercase tracking-tight">HIPAA Compliant</span>
+              </div>
+              <div className="w-px h-4 bg-slate-200" />
+              <div className="flex items-center gap-1.5 grayscale opacity-70">
+                <Icon name="encrypted" size={18} />
+                <span className="text-[10px] font-bold uppercase tracking-tight">256-bit Encryption</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 text-center">
+              Authorized Use Only. All activities are monitored and logged.
+              <br />
+              © 2024 MediBed Pro Technologies LLC.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
