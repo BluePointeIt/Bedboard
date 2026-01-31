@@ -24,13 +24,14 @@ function AuthenticatedApp() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppLayout user={user} onSignOut={signOut} />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Navigate to="/analytics" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/residents" element={<Residents />} />
           <Route path="/admissions" element={<Admissions />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/analytics" replace />} />
       </Routes>
     </BrowserRouter>
   );
@@ -41,13 +42,14 @@ function UnauthenticatedApp() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Navigate to="/analytics" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/residents" element={<Residents />} />
           <Route path="/admissions" element={<Admissions />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/analytics" replace />} />
       </Routes>
     </BrowserRouter>
   );

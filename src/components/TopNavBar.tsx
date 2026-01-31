@@ -20,10 +20,10 @@ export function TopNavBar({ searchQuery, onSearchChange, user, onSignOut }: TopN
   const helpRef = useRef<HTMLDivElement>(null);
 
   const navItems = [
-    { path: '/', label: 'Dashboard' },
+    { path: '/analytics', label: 'Analytics' },
+    { path: '/dashboard', label: 'Dashboard' },
     { path: '/residents', label: 'Residents' },
     { path: '/admissions', label: 'Admissions' },
-    { path: '/analytics', label: 'Analytics' },
     { path: '/settings', label: 'Settings' },
   ];
 
