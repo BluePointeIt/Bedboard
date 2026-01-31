@@ -29,6 +29,21 @@ export function Reports() {
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
 
+  // Status filter for custom reports
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set(['occupied']));
+
+  const toggleStatus = (status: string) => {
+    setSelectedStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  };
+
   // Custom report field selection
   const [customFields, setCustomFields] = useState<CustomReportField[]>([
     { key: 'name', label: 'Resident Name', header: 'Resident Name', enabled: true },
@@ -92,13 +107,14 @@ export function Reports() {
 
   // Generate custom report data
   const customReportData = useMemo(() => {
-    // Only include occupied beds with residents
+    // Filter beds based on selected statuses
     return beds
       .filter((b) => {
-        if (b.status !== 'occupied' || !b.resident) return false;
+        // Filter by status
+        if (!selectedStatuses.has(b.status)) return false;
 
-        // Apply date range filter
-        if (dateFrom || dateTo) {
+        // Apply date range filter only for occupied beds with residents
+        if (b.status === 'occupied' && b.resident && (dateFrom || dateTo)) {
           const admissionDate = b.resident.admission_date;
           if (!admissionDate) return false;
 
@@ -117,16 +133,20 @@ export function Reports() {
         return true;
       })
       .map((bed) => ({
-        name: `${bed.resident?.first_name} ${bed.resident?.last_name}`,
+        name: bed.resident
+          ? `${bed.resident.first_name} ${bed.resident.last_name}`
+          : '-',
         room: `${bed.room?.room_number}${bed.bed_letter}`,
         wing: bed.room?.wing?.name || '',
         status: bed.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-        payor: bed.resident?.payor.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()) || '',
+        payor: bed.resident?.payor
+          ? bed.resident.payor.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+          : '-',
         admissionDate: bed.resident?.admission_date
           ? formatDate(bed.resident.admission_date)
-          : '',
+          : '-',
       }));
-  }, [beds, dateFrom, dateTo]);
+  }, [beds, dateFrom, dateTo, selectedStatuses]);
 
   // Get enabled columns for custom report
   const enabledColumns: ColumnDef[] = customFields
@@ -189,7 +209,7 @@ export function Reports() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleExportExcel}
-            disabled={loading || (reportType === 'custom' && enabledColumns.length === 0)}
+            disabled={loading || (reportType === 'custom' && (enabledColumns.length === 0 || selectedStatuses.size === 0))}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon name="table_chart" size={18} />
@@ -197,7 +217,7 @@ export function Reports() {
           </button>
           <button
             onClick={handleExportPDF}
-            disabled={loading || (reportType === 'custom' && enabledColumns.length === 0)}
+            disabled={loading || (reportType === 'custom' && (enabledColumns.length === 0 || selectedStatuses.size === 0))}
             className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon name="picture_as_pdf" size={18} />
@@ -420,6 +440,60 @@ export function Reports() {
             )}
           </div>
 
+          {/* Status Filter */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h3 className="font-semibold text-slate-900 mb-4">Filter by Bed Status</h3>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => toggleStatus('occupied')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  selectedStatuses.has('occupied')
+                    ? 'bg-primary-50 border-primary-300 text-primary-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={selectedStatuses.has('occupied') ? 'check_box' : 'check_box_outline_blank'}
+                  size={18}
+                />
+                Occupied
+              </button>
+              <button
+                onClick={() => toggleStatus('vacant')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  selectedStatuses.has('vacant')
+                    ? 'bg-green-50 border-green-300 text-green-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={selectedStatuses.has('vacant') ? 'check_box' : 'check_box_outline_blank'}
+                  size={18}
+                />
+                Vacant
+              </button>
+              <button
+                onClick={() => toggleStatus('out_of_service')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  selectedStatuses.has('out_of_service')
+                    ? 'bg-slate-100 border-slate-400 text-slate-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={selectedStatuses.has('out_of_service') ? 'check_box' : 'check_box_outline_blank'}
+                  size={18}
+                />
+                Out of Service
+              </button>
+            </div>
+            {selectedStatuses.size === 0 && (
+              <p className="mt-3 text-sm text-amber-600">
+                Please select at least one status to generate a report.
+              </p>
+            )}
+          </div>
+
           {/* Date Range Filter */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h3 className="font-semibold text-slate-900 mb-4">Filter by Admission Date</h3>
@@ -471,7 +545,7 @@ export function Reports() {
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="font-semibold text-slate-900">Report Preview</h3>
               <span className="text-sm text-slate-500">
-                {customReportData.length} resident{customReportData.length !== 1 ? 's' : ''}
+                {customReportData.length} bed{customReportData.length !== 1 ? 's' : ''}
               </span>
             </div>
 
@@ -482,11 +556,13 @@ export function Reports() {
               </div>
             ) : customReportData.length === 0 ? (
               <div className="p-12 text-center text-slate-500">
-                <Icon name="person_off" size={48} className="mx-auto mb-4 text-slate-300" />
+                <Icon name="bed" size={48} className="mx-auto mb-4 text-slate-300" />
                 <p>
-                  {dateFrom || dateTo
-                    ? 'No residents found matching the selected date range'
-                    : 'No occupied beds found for the selected wing'}
+                  {selectedStatuses.size === 0
+                    ? 'Please select at least one status above'
+                    : dateFrom || dateTo
+                    ? 'No beds found matching the selected filters'
+                    : 'No beds found for the selected criteria'}
                 </p>
               </div>
             ) : (
