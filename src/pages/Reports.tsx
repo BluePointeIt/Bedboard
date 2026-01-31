@@ -82,7 +82,7 @@ export function Reports() {
     { key: 'room', label: 'Room/Bed', header: 'Room/Bed', enabled: true },
     { key: 'wing', label: 'Wing', header: 'Wing', enabled: true },
     { key: 'status', label: 'Status', header: 'Status', enabled: true },
-    { key: 'diagnosis', label: 'Diagnosis', header: 'Diagnosis', enabled: false },
+    { key: 'diagnosis', label: 'Diagnosis', header: 'Diagnosis', enabled: true },
     { key: 'isolation', label: 'Isolation', header: 'Isolation', enabled: false },
     { key: 'payor', label: 'Payor Type', header: 'Payor', enabled: false },
     { key: 'admissionDate', label: 'Admission Date', header: 'Admitted', enabled: false },
