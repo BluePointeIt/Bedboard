@@ -293,7 +293,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Wing Summary - Only show when viewing all wings */}
+      {/* Wing Summary - Show all wings when viewing all */}
       {!selectedWingId && wings.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 p-6">
           <div className="flex items-center gap-3 mb-6">
@@ -340,6 +340,64 @@ export function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Individual Wing Summary - Show when viewing a specific wing */}
+      {selectedWingId && selectedWing && (() => {
+        const wingOccupied = beds.filter(b => b.status === 'occupied').length;
+        const wingVacant = beds.filter(b => b.status === 'vacant').length;
+        const wingOutOfService = beds.filter(b => b.status === 'out_of_service').length;
+        const wingTotal = beds.length;
+        const wingRate = wingTotal > 0 ? Math.round((wingOccupied / wingTotal) * 100) : 0;
+
+        return (
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                <Icon name="domain" size={20} className="text-amber-600" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-slate-900">{selectedWing.name} Summary</h2>
+                <p className="text-sm text-slate-500">Current wing occupancy details</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Occupancy Rate */}
+              <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-xl p-4 border border-amber-200">
+                <p className="text-xs font-medium text-amber-700 mb-1">Occupancy Rate</p>
+                <p className="text-2xl font-bold text-amber-600">{wingRate}%</p>
+                <div className="h-1.5 bg-amber-200 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-amber-500 transition-all duration-300"
+                    style={{ width: `${wingRate}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Occupied */}
+              <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl p-4 border border-primary-200">
+                <p className="text-xs font-medium text-primary-700 mb-1">Occupied</p>
+                <p className="text-2xl font-bold text-primary-600">{wingOccupied}</p>
+                <p className="text-xs text-primary-500 mt-1">of {wingTotal} beds</p>
+              </div>
+
+              {/* Vacant */}
+              <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-xl p-4 border border-green-200">
+                <p className="text-xs font-medium text-green-700 mb-1">Available</p>
+                <p className="text-2xl font-bold text-green-600">{wingVacant}</p>
+                <p className="text-xs text-green-500 mt-1">ready for admission</p>
+              </div>
+
+              {/* Out of Service */}
+              <div className="bg-gradient-to-br from-slate-500/10 to-slate-500/5 rounded-xl p-4 border border-slate-200">
+                <p className="text-xs font-medium text-slate-700 mb-1">Out of Service</p>
+                <p className="text-2xl font-bold text-slate-600">{wingOutOfService}</p>
+                <p className="text-xs text-slate-500 mt-1">maintenance</p>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Spacer before Unit Overview */}
       <div className="pt-4" />
