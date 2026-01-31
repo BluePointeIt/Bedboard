@@ -1,17 +1,28 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { TopNavBar } from './TopNavBar';
 import { SideNavBar } from './SideNavBar';
 import { useWings } from '../hooks/useWings';
 
-export function AppLayout() {
+interface AppLayoutProps {
+  user?: SupabaseUser | null;
+  onSignOut?: () => Promise<{ error: Error | null }>;
+}
+
+export function AppLayout({ user, onSignOut }: AppLayoutProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWingId, setSelectedWingId] = useState<string | null>(null);
   const { wings, loading } = useWings();
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <TopNavBar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <TopNavBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        user={user}
+        onSignOut={onSignOut}
+      />
       <div className="flex flex-1 overflow-hidden">
         <SideNavBar
           wings={wings}

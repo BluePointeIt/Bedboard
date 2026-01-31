@@ -1,13 +1,23 @@
+import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Icon } from './Icon';
 
 interface TopNavBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  user?: SupabaseUser | null;
+  onSignOut?: () => Promise<{ error: Error | null }>;
 }
 
-export function TopNavBar({ searchQuery, onSearchChange }: TopNavBarProps) {
+export function TopNavBar({ searchQuery, onSearchChange, user, onSignOut }: TopNavBarProps) {
   const location = useLocation();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const helpRef = useRef<HTMLDivElement>(null);
 
   const navItems = [
     { path: '/', label: 'Dashboard' },
@@ -15,6 +25,34 @@ export function TopNavBar({ searchQuery, onSearchChange }: TopNavBarProps) {
     { path: '/admissions', label: 'Admissions' },
     { path: '/settings', label: 'Settings' },
   ];
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (helpRef.current && !helpRef.current.contains(event.target as Node)) {
+        setShowHelp(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSignOut = async () => {
+    if (onSignOut) {
+      await onSignOut();
+    }
+    setShowUserMenu(false);
+  };
+
+  const userEmail = user?.email || 'User';
+  const userInitials = userEmail.charAt(0).toUpperCase();
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-solid border-[#e7edf3] bg-white px-10 z-20">
@@ -72,17 +110,122 @@ export function TopNavBar({ searchQuery, onSearchChange }: TopNavBarProps) {
           </div>
         </label>
         <div className="flex gap-2">
-          <button className="flex items-center justify-center rounded-lg h-10 w-10 bg-[#e7edf3] text-[#0d141b] hover:bg-[#dde5ed] transition-colors">
-            <Icon name="notifications" size={20} />
-          </button>
-          <button className="flex items-center justify-center rounded-lg h-10 w-10 bg-[#e7edf3] text-[#0d141b] hover:bg-[#dde5ed] transition-colors">
-            <Icon name="help" size={20} />
-          </button>
+          {/* Notifications Dropdown */}
+          <div className="relative" ref={notificationsRef}>
+            <button
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                setShowHelp(false);
+                setShowUserMenu(false);
+              }}
+              className="flex items-center justify-center rounded-lg h-10 w-10 bg-[#e7edf3] text-[#0d141b] hover:bg-[#dde5ed] transition-colors"
+            >
+              <Icon name="notifications" size={20} />
+            </button>
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-[#e7edf3] py-2 z-50">
+                <div className="px-4 py-2 border-b border-[#e7edf3]">
+                  <h3 className="font-semibold text-[#0d141b]">Notifications</h3>
+                </div>
+                <div className="px-4 py-8 text-center">
+                  <Icon name="notifications_off" size={32} className="text-[#c4d4e5] mx-auto mb-2" />
+                  <p className="text-sm text-[#4c739a]">No new notifications</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Help Dropdown */}
+          <div className="relative" ref={helpRef}>
+            <button
+              onClick={() => {
+                setShowHelp(!showHelp);
+                setShowNotifications(false);
+                setShowUserMenu(false);
+              }}
+              className="flex items-center justify-center rounded-lg h-10 w-10 bg-[#e7edf3] text-[#0d141b] hover:bg-[#dde5ed] transition-colors"
+            >
+              <Icon name="help" size={20} />
+            </button>
+            {showHelp && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-[#e7edf3] py-2 z-50">
+                <div className="px-4 py-2 border-b border-[#e7edf3]">
+                  <h3 className="font-semibold text-[#0d141b]">Help & Support</h3>
+                </div>
+                <div className="py-1">
+                  <button className="w-full px-4 py-2 text-left text-sm text-[#0d141b] hover:bg-[#f6f7f8] flex items-center gap-3">
+                    <Icon name="menu_book" size={18} className="text-[#4c739a]" />
+                    Documentation
+                  </button>
+                  <button className="w-full px-4 py-2 text-left text-sm text-[#0d141b] hover:bg-[#f6f7f8] flex items-center gap-3">
+                    <Icon name="support_agent" size={18} className="text-[#4c739a]" />
+                    Contact Support
+                  </button>
+                  <button className="w-full px-4 py-2 text-left text-sm text-[#0d141b] hover:bg-[#f6f7f8] flex items-center gap-3">
+                    <Icon name="keyboard" size={18} className="text-[#4c739a]" />
+                    Keyboard Shortcuts
+                  </button>
+                </div>
+                <div className="px-4 py-2 border-t border-[#e7edf3]">
+                  <p className="text-xs text-[#4c739a]">MediBed Pro v1.0.0</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <div
-          className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 bg-primary-200"
-          title="User Profile"
-        />
+
+        {/* User Profile Dropdown */}
+        <div className="relative" ref={userMenuRef}>
+          <button
+            onClick={() => {
+              setShowUserMenu(!showUserMenu);
+              setShowNotifications(false);
+              setShowHelp(false);
+            }}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <div className="bg-primary-500 text-white font-bold flex items-center justify-center rounded-full size-10">
+              {userInitials}
+            </div>
+          </button>
+          {showUserMenu && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-[#e7edf3] py-2 z-50">
+              <div className="px-4 py-3 border-b border-[#e7edf3]">
+                <p className="font-semibold text-[#0d141b] truncate">{userEmail}</p>
+                <p className="text-xs text-[#4c739a]">Administrator</p>
+              </div>
+              <div className="py-1">
+                <Link
+                  to="/settings"
+                  onClick={() => setShowUserMenu(false)}
+                  className="w-full px-4 py-2 text-left text-sm text-[#0d141b] hover:bg-[#f6f7f8] flex items-center gap-3"
+                >
+                  <Icon name="person" size={18} className="text-[#4c739a]" />
+                  My Profile
+                </Link>
+                <Link
+                  to="/settings"
+                  onClick={() => setShowUserMenu(false)}
+                  className="w-full px-4 py-2 text-left text-sm text-[#0d141b] hover:bg-[#f6f7f8] flex items-center gap-3"
+                >
+                  <Icon name="settings" size={18} className="text-[#4c739a]" />
+                  Settings
+                </Link>
+              </div>
+              {onSignOut && (
+                <div className="border-t border-[#e7edf3] pt-1">
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
+                  >
+                    <Icon name="logout" size={18} className="text-red-500" />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

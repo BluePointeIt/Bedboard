@@ -6,7 +6,7 @@ import { useAuth } from './hooks/useAuth';
 const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 function AuthenticatedApp() {
-  const { user, loading, signIn, signUp } = useAuth();
+  const { user, loading, signIn, signUp, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -23,7 +23,7 @@ function AuthenticatedApp() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<AppLayout />}>
+        <Route element={<AppLayout user={user} onSignOut={signOut} />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/residents" element={<Residents />} />
           <Route path="/admissions" element={<Admissions />} />
