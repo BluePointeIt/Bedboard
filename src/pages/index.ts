@@ -4,3 +4,4 @@ export { Admissions } from './Admissions';
 export { Analytics } from './Analytics';
 export { Login } from './Login';
 export { Settings } from './Settings';
+export { Reports } from './Reports';

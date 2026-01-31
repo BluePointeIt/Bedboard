@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components';
-import { Dashboard, Residents, Admissions, Analytics, Login, Settings } from './pages';
+import { Dashboard, Residents, Admissions, Analytics, Login, Settings, Reports } from './pages';
 import { useAuth } from './hooks/useAuth';
 
 const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -29,6 +29,7 @@ function AuthenticatedApp() {
           <Route path="/residents" element={<Residents />} />
           <Route path="/admissions" element={<Admissions />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/analytics" replace />} />
@@ -47,6 +48,7 @@ function UnauthenticatedApp() {
           <Route path="/residents" element={<Residents />} />
           <Route path="/admissions" element={<Admissions />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
         <Route path="*" element={<Navigate to="/analytics" replace />} />
