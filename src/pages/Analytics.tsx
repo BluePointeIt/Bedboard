@@ -234,7 +234,7 @@ export function Analytics() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-xl bg-primary-500/10 flex items-center justify-center">
           <Icon name="analytics" size={24} className="text-primary-500" />
@@ -374,7 +374,7 @@ export function Analytics() {
                 <th className="text-center py-3 px-4 text-sm font-semibold text-slate-900">Budget</th>
                 <th className="text-center py-3 px-4 text-sm font-semibold text-slate-900">Actual</th>
                 <th className="text-center py-3 px-4 text-sm font-semibold text-slate-900">Variance</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-900 w-48">Progress</th>
+                <th className="text-left py-3 px-4 text-sm font-semibold text-slate-900 min-w-[200px]">Progress</th>
               </tr>
             </thead>
             <tbody>
@@ -411,7 +411,7 @@ export function Analytics() {
                             style={{ width: `${Math.min(progress, 100)}%` }}
                           />
                         </div>
-                        <span className="text-xs font-medium text-slate-500 w-12 text-right">
+                        <span className="text-xs font-medium text-slate-500 w-14 text-right">
                           {budget > 0 ? `${Math.round((actual / budget) * 100)}%` : '-'}
                         </span>
                       </div>
@@ -442,7 +442,7 @@ export function Analytics() {
                         style={{ width: `${analytics.caseMixTotal > 0 ? Math.min((analytics.occupiedBeds / analytics.caseMixTotal) * 100, 100) : 0}%` }}
                       />
                     </div>
-                    <span className="text-xs font-bold text-slate-900 w-12 text-right">
+                    <span className="text-xs font-bold text-slate-900 w-14 text-right">
                       {analytics.caseMixTotal > 0 ? `${Math.round((analytics.occupiedBeds / analytics.caseMixTotal) * 100)}%` : '-'}
                     </span>
                   </div>
