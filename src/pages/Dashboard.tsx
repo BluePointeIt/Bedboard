@@ -4,7 +4,7 @@ import { useBeds, useBedActions } from '../hooks/useBeds';
 import type { GenderCompatibilityResult } from '../hooks/useBeds';
 import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useUnassignedResidents } from '../hooks/useResidents';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { BedWithDetails } from '../components/BedCard';
 import type { LayoutContext } from '../components/AppLayout';
 import type { Gender } from '../types';
@@ -141,6 +141,102 @@ export function Dashboard() {
   // Get vacant beds for move functionality
   const vacantBeds = beds.filter((bed) => bed.status === 'vacant');
 
+  // Calculate gender-specific bed availability for the current view
+  const genderAvailability = useMemo(() => {
+    const vacantBedsForCalc = beds.filter(b => b.status === 'vacant');
+
+    let maleAvailable = 0;
+    let femaleAvailable = 0;
+    let eitherAvailable = 0;
+
+    // Group beds by room
+    const roomToBeds = new Map<string, typeof beds>();
+    beds.forEach(bed => {
+      const roomId = bed.room_id || bed.room?.id;
+      if (roomId) {
+        if (!roomToBeds.has(roomId)) {
+          roomToBeds.set(roomId, []);
+        }
+        roomToBeds.get(roomId)!.push(bed);
+      }
+    });
+
+    // Group rooms by shared bathroom group
+    const bathroomGroupToRooms = new Map<string, Set<string>>();
+    beds.forEach(bed => {
+      const room = bed.room;
+      if (room?.has_shared_bathroom && room?.shared_bathroom_group_id) {
+        if (!bathroomGroupToRooms.has(room.shared_bathroom_group_id)) {
+          bathroomGroupToRooms.set(room.shared_bathroom_group_id, new Set());
+        }
+        bathroomGroupToRooms.get(room.shared_bathroom_group_id)!.add(room.id);
+      }
+    });
+
+    // For each vacant bed, determine what gender can occupy it
+    vacantBedsForCalc.forEach(vacantBed => {
+      const roomId = vacantBed.room_id || vacantBed.room?.id;
+      if (!roomId) {
+        eitherAvailable++;
+        return;
+      }
+
+      const room = vacantBed.room;
+      const roomBeds = roomToBeds.get(roomId) || [];
+      const isMultiBedRoom = roomBeds.length > 1;
+
+      // Collect all rooms to check for gender constraints
+      const roomsToCheck = new Set<string>([roomId]);
+
+      // Add rooms sharing a bathroom
+      if (room?.has_shared_bathroom && room?.shared_bathroom_group_id) {
+        const sharedRooms = bathroomGroupToRooms.get(room.shared_bathroom_group_id);
+        if (sharedRooms) {
+          sharedRooms.forEach(r => roomsToCheck.add(r));
+        }
+      }
+
+      // Only apply gender constraints if multi-bed room or shared bathroom
+      if (!isMultiBedRoom && roomsToCheck.size === 1) {
+        eitherAvailable++;
+        return;
+      }
+
+      // Find existing genders in all rooms to check
+      const existingGenders = new Set<Gender>();
+      roomsToCheck.forEach(checkRoomId => {
+        const checkRoomBeds = roomToBeds.get(checkRoomId) || [];
+        checkRoomBeds.forEach(bed => {
+          if (bed.status === 'occupied' && bed.resident?.gender) {
+            existingGenders.add(bed.resident.gender);
+          }
+        });
+      });
+
+      // Determine availability based on existing occupants
+      if (existingGenders.size === 0) {
+        eitherAvailable++;
+      } else if (existingGenders.size === 1) {
+        const existingGender = Array.from(existingGenders)[0];
+        if (existingGender === 'male') {
+          maleAvailable++;
+        } else if (existingGender === 'female') {
+          femaleAvailable++;
+        } else {
+          eitherAvailable++;
+        }
+      } else {
+        eitherAvailable++;
+      }
+    });
+
+    return {
+      male: maleAvailable + eitherAvailable,
+      female: femaleAvailable + eitherAvailable,
+      either: eitherAvailable,
+    };
+  }, [beds]);
+
   return (
     <div className="space-y-6">
       {/* Dashboard Stats */}
@@ -212,6 +308,110 @@ export function Dashboard() {
             <BedCard key={bed.id} bed={bed} onClick={() => setSelectedBed(bed)} />
           ))}
         </BedGrid>
+      )}
+
+      {/* Gender-Specific Bed Availability */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+            <Icon name="wc" size={20} className="text-violet-600" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-slate-900">Gender-Specific Availability</h2>
+            <p className="text-sm text-slate-500">
+              {selectedWing ? `Available beds in ${selectedWing.name}` : 'Available beds across all wings'}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Male Available */}
+          <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl p-5 border border-primary-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
+                <Icon name="male" size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-primary-700">Male Beds</p>
+                <p className="text-2xl font-bold text-primary-600">{genderAvailability.male}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Female Available */}
+          <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-xl p-5 border border-pink-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center">
+                <Icon name="female" size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-pink-700">Female Beds</p>
+                <p className="text-2xl font-bold text-pink-600">{genderAvailability.female}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Either Gender */}
+          <div className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 rounded-xl p-5 border border-violet-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center">
+                <Icon name="group" size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-violet-700">Open to Either</p>
+                <p className="text-2xl font-bold text-violet-600">{genderAvailability.either}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Wing Summary - Only show when viewing all wings */}
+      {!selectedWingId && wings.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+              <Icon name="domain" size={20} className="text-amber-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-slate-900">Wing Summary</h2>
+              <p className="text-sm text-slate-500">Occupancy breakdown by wing</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {wings.map(wing => {
+              const wingBeds = beds.filter(b => b.room?.wing?.id === wing.id);
+              const wingOccupied = wingBeds.filter(b => b.status === 'occupied').length;
+              const wingTotal = wingBeds.length;
+              const wingRate = wingTotal > 0 ? Math.round((wingOccupied / wingTotal) * 100) : 0;
+
+              return (
+                <div key={wing.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-medium text-slate-900">{wing.name}</h3>
+                    <span className={`text-sm font-bold ${
+                      wingRate >= 90 ? 'text-green-600' : wingRate >= 70 ? 'text-amber-600' : 'text-red-500'
+                    }`}>
+                      {wingRate}%
+                    </span>
+                  </div>
+                  <div className="h-2 bg-slate-200 rounded-full overflow-hidden mb-2">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        wingRate >= 90 ? 'bg-green-500' : wingRate >= 70 ? 'bg-amber-500' : 'bg-red-400'
+                      }`}
+                      style={{ width: `${wingRate}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {wingOccupied} of {wingTotal} beds occupied
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Bed Detail Modal */}
