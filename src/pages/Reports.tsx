@@ -44,12 +44,16 @@ export function Reports() {
     });
   };
 
+  // Isolation filter for custom reports
+  const [isolationFilter, setIsolationFilter] = useState<'all' | 'isolation' | 'non-isolation'>('all');
+
   // Custom report field selection
   const [customFields, setCustomFields] = useState<CustomReportField[]>([
     { key: 'name', label: 'Resident Name', header: 'Resident Name', enabled: true },
     { key: 'room', label: 'Room/Bed', header: 'Room/Bed', enabled: true },
     { key: 'wing', label: 'Wing', header: 'Wing', enabled: true },
     { key: 'status', label: 'Status', header: 'Status', enabled: true },
+    { key: 'isolation', label: 'Isolation', header: 'Isolation', enabled: false },
     { key: 'payor', label: 'Payor Type', header: 'Payor', enabled: false },
     { key: 'admissionDate', label: 'Admission Date', header: 'Admitted', enabled: false },
   ]);
@@ -113,6 +117,15 @@ export function Reports() {
         // Filter by status
         if (!selectedStatuses.has(b.status)) return false;
 
+        // Apply isolation filter
+        if (isolationFilter !== 'all' && b.resident) {
+          if (isolationFilter === 'isolation' && !b.resident.is_isolation) return false;
+          if (isolationFilter === 'non-isolation' && b.resident.is_isolation) return false;
+        } else if (isolationFilter === 'isolation' && !b.resident) {
+          // If filtering for isolation only, exclude beds without residents
+          return false;
+        }
+
         // Apply date range filter only for occupied beds with residents
         if (b.status === 'occupied' && b.resident && (dateFrom || dateTo)) {
           const admissionDate = b.resident.admission_date;
@@ -139,6 +152,11 @@ export function Reports() {
         room: `${bed.room?.room_number}${bed.bed_letter}`,
         wing: bed.room?.wing?.name || '',
         status: bed.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        isolation: bed.resident?.is_isolation
+          ? bed.resident.isolation_type
+            ? bed.resident.isolation_type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+            : 'Yes'
+          : '-',
         payor: bed.resident?.payor
           ? bed.resident.payor.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
           : '-',
@@ -146,7 +164,7 @@ export function Reports() {
           ? formatDate(bed.resident.admission_date)
           : '-',
       }));
-  }, [beds, dateFrom, dateTo, selectedStatuses]);
+  }, [beds, dateFrom, dateTo, selectedStatuses, isolationFilter]);
 
   // Get enabled columns for custom report
   const enabledColumns: ColumnDef[] = customFields
@@ -492,6 +510,55 @@ export function Reports() {
                 Please select at least one status to generate a report.
               </p>
             )}
+          </div>
+
+          {/* Isolation Filter */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h3 className="font-semibold text-slate-900 mb-4">Filter by Isolation Status</h3>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setIsolationFilter('all')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  isolationFilter === 'all'
+                    ? 'bg-primary-50 border-primary-300 text-primary-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={isolationFilter === 'all' ? 'radio_button_checked' : 'radio_button_unchecked'}
+                  size={18}
+                />
+                All Residents
+              </button>
+              <button
+                onClick={() => setIsolationFilter('isolation')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  isolationFilter === 'isolation'
+                    ? 'bg-yellow-50 border-yellow-400 text-yellow-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={isolationFilter === 'isolation' ? 'radio_button_checked' : 'radio_button_unchecked'}
+                  size={18}
+                />
+                Isolation Only
+              </button>
+              <button
+                onClick={() => setIsolationFilter('non-isolation')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  isolationFilter === 'non-isolation'
+                    ? 'bg-green-50 border-green-300 text-green-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={isolationFilter === 'non-isolation' ? 'radio_button_checked' : 'radio_button_unchecked'}
+                  size={18}
+                />
+                Non-Isolation Only
+              </button>
+            </div>
           </div>
 
           {/* Date Range Filter */}
