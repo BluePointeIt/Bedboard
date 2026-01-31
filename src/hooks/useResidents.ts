@@ -11,6 +11,7 @@ export interface CreateResidentInput {
   first_name: string;
   last_name: string;
   gender: Gender;
+  date_of_birth?: string;
   admission_date: string;
   payor: PayorType;
   diagnosis?: string;
@@ -25,6 +26,7 @@ export interface UpdateResidentInput {
   first_name?: string;
   last_name?: string;
   gender?: Gender;
+  date_of_birth?: string;
   admission_date?: string;
   payor?: PayorType;
   diagnosis?: string;

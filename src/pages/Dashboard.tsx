@@ -598,6 +598,19 @@ export function Dashboard() {
               <option value="">Choose a resident...</option>
               {unassignedResidents.map((resident) => {
                 const isCompatible = !requiredGenderForBed || resident.gender === requiredGenderForBed;
+                // Calculate age from date of birth
+                let ageStr = '';
+                if (resident.date_of_birth) {
+                  const dob = new Date(resident.date_of_birth);
+                  const today = new Date();
+                  let age = today.getFullYear() - dob.getFullYear();
+                  const monthDiff = today.getMonth() - dob.getMonth();
+                  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                    age--;
+                  }
+                  ageStr = `, ${age}yo`;
+                }
+                const isolationStr = resident.is_isolation ? ' - ISOLATION' : '';
                 return (
                   <option
                     key={resident.id}
@@ -605,7 +618,7 @@ export function Dashboard() {
                     disabled={!isCompatible}
                     className={!isCompatible ? 'text-gray-400' : ''}
                   >
-                    {resident.first_name} {resident.last_name} ({resident.gender === 'male' ? 'M' : resident.gender === 'female' ? 'F' : 'O'}) - {resident.payor.replace('_', ' ')}
+                    {resident.first_name} {resident.last_name} ({resident.gender === 'male' ? 'M' : resident.gender === 'female' ? 'F' : 'O'}{ageStr}){isolationStr}
                     {!isCompatible ? ' (incompatible gender)' : ''}
                   </option>
                 );

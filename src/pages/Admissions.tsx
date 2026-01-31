@@ -14,6 +14,7 @@ export function Admissions() {
     first_name: '',
     last_name: '',
     gender: 'male',
+    date_of_birth: '',
     admission_date: new Date().toISOString().split('T')[0],
     payor: 'private',
     is_isolation: false,
@@ -43,6 +44,7 @@ export function Admissions() {
         first_name: '',
         last_name: '',
         gender: 'male',
+        date_of_birth: '',
         admission_date: new Date().toISOString().split('T')[0],
         payor: 'private',
         is_isolation: false,
@@ -140,8 +142,21 @@ export function Admissions() {
             </div>
           </div>
 
-          {/* Gender and Care Level */}
+          {/* Date of Birth and Gender */}
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="cake" size={16} className="text-slate-400" />
+                Date of Birth
+              </label>
+              <input
+                type="date"
+                name="date_of_birth"
+                value={formData.date_of_birth}
+                onChange={handleChange}
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+              />
+            </div>
             <div>
               <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
                 <Icon name="wc" size={16} className="text-slate-400" />
@@ -158,25 +173,27 @@ export function Admissions() {
                 <option value="other">Other</option>
               </select>
             </div>
-            <div>
-              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
-                <Icon name="payments" size={16} className="text-slate-400" />
-                Payor *
-              </label>
-              <select
-                name="payor"
-                value={formData.payor}
-                onChange={handleChange}
-                className="w-full h-12 px-4 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-              >
-                <option value="private">Private</option>
-                <option value="medicare">Medicare</option>
-                <option value="medicaid">Medicaid</option>
-                <option value="managed_care">Managed Care</option>
-                <option value="bed_hold">Bed Hold</option>
-                <option value="hospice">Hospice</option>
-              </select>
-            </div>
+          </div>
+
+          {/* Payor */}
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="payments" size={16} className="text-slate-400" />
+              Payor *
+            </label>
+            <select
+              name="payor"
+              value={formData.payor}
+              onChange={handleChange}
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+            >
+              <option value="private">Private</option>
+              <option value="medicare">Medicare</option>
+              <option value="medicaid">Medicaid</option>
+              <option value="managed_care">Managed Care</option>
+              <option value="bed_hold">Bed Hold</option>
+              <option value="hospice">Hospice</option>
+            </select>
           </div>
 
           {/* Admission Date */}
