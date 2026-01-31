@@ -41,6 +41,15 @@ export function exportToExcel<T extends Record<string, unknown>>(
   XLSX.writeFile(workbook, `${filename}.xlsx`);
 }
 
+export interface ReportFilters {
+  wing?: string;
+  statuses?: string[];
+  isolation?: string;
+  diagnoses?: string[];
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 /**
  * Export data to PDF format with a table
  */
@@ -48,7 +57,8 @@ export function exportToPDF<T extends Record<string, unknown>>(
   data: T[],
   columns: ColumnDef[],
   title: string,
-  filename: string
+  filename: string,
+  filters?: ReportFilters
 ): void {
   // Create PDF document in landscape for wider tables
   const doc = new jsPDF({
@@ -67,6 +77,64 @@ export function exportToPDF<T extends Record<string, unknown>>(
   doc.setFont('helvetica', 'normal');
   doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
 
+  let startY = 35;
+
+  // Add filter details if provided
+  if (filters) {
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Applied Filters:', 14, startY);
+    startY += 6;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+
+    const filterLines: string[] = [];
+
+    if (filters.wing) {
+      filterLines.push(`Wing: ${filters.wing}`);
+    }
+
+    if (filters.statuses && filters.statuses.length > 0) {
+      filterLines.push(`Status: ${filters.statuses.join(', ')}`);
+    }
+
+    if (filters.isolation && filters.isolation !== 'All Residents') {
+      filterLines.push(`Isolation: ${filters.isolation}`);
+    }
+
+    if (filters.diagnoses && filters.diagnoses.length > 0) {
+      filterLines.push(`Diagnosis: ${filters.diagnoses.join(', ')}`);
+    }
+
+    if (filters.dateFrom || filters.dateTo) {
+      if (filters.dateFrom && filters.dateTo) {
+        filterLines.push(`Date Range: ${filters.dateFrom} to ${filters.dateTo}`);
+      } else if (filters.dateFrom) {
+        filterLines.push(`Date Range: From ${filters.dateFrom}`);
+      } else if (filters.dateTo) {
+        filterLines.push(`Date Range: To ${filters.dateTo}`);
+      }
+    }
+
+    if (filterLines.length === 0) {
+      filterLines.push('No filters applied (showing all data)');
+    }
+
+    filterLines.forEach((line) => {
+      doc.text(`  - ${line}`, 14, startY);
+      startY += 5;
+    });
+
+    startY += 5;
+  }
+
+  // Add record count
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
+  doc.text(`Total Records: ${data.length}`, 14, startY);
+  startY += 8;
+
   // Prepare table data
   const headers = columns.map((col) => col.header);
   const rows = data.map((row) =>
@@ -80,7 +148,7 @@ export function exportToPDF<T extends Record<string, unknown>>(
   autoTable(doc, {
     head: [headers],
     body: rows,
-    startY: 35,
+    startY: startY,
     styles: {
       fontSize: 9,
       cellPadding: 3,

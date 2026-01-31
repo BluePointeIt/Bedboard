@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Icon } from '../components';
 import { useBeds } from '../hooks/useBeds';
@@ -9,6 +9,7 @@ import {
   exportCensusToExcel,
   exportCensusToPDF,
   type ColumnDef,
+  type ReportFilters,
 } from '../lib/exportUtils';
 import { formatDate } from '../lib/utils';
 
@@ -47,12 +48,41 @@ export function Reports() {
   // Isolation filter for custom reports
   const [isolationFilter, setIsolationFilter] = useState<'all' | 'isolation' | 'non-isolation'>('all');
 
+  // Diagnosis filter for custom reports
+  const [selectedDiagnoses, setSelectedDiagnoses] = useState<Set<string>>(new Set());
+  const [diagnosisDropdownOpen, setDiagnosisDropdownOpen] = useState(false);
+  const diagnosisDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close diagnosis dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (diagnosisDropdownRef.current && !diagnosisDropdownRef.current.contains(event.target as Node)) {
+        setDiagnosisDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleDiagnosis = (diagnosis: string) => {
+    setSelectedDiagnoses((prev) => {
+      const next = new Set(prev);
+      if (next.has(diagnosis)) {
+        next.delete(diagnosis);
+      } else {
+        next.add(diagnosis);
+      }
+      return next;
+    });
+  };
+
   // Custom report field selection
   const [customFields, setCustomFields] = useState<CustomReportField[]>([
     { key: 'name', label: 'Resident Name', header: 'Resident Name', enabled: true },
     { key: 'room', label: 'Room/Bed', header: 'Room/Bed', enabled: true },
     { key: 'wing', label: 'Wing', header: 'Wing', enabled: true },
     { key: 'status', label: 'Status', header: 'Status', enabled: true },
+    { key: 'diagnosis', label: 'Diagnosis', header: 'Diagnosis', enabled: false },
     { key: 'isolation', label: 'Isolation', header: 'Isolation', enabled: false },
     { key: 'payor', label: 'Payor Type', header: 'Payor', enabled: false },
     { key: 'admissionDate', label: 'Admission Date', header: 'Admitted', enabled: false },
@@ -61,6 +91,17 @@ export function Reports() {
   const { beds, loading } = useBeds({
     wing_id: selectedWingId || undefined,
   });
+
+  // Get unique diagnoses from beds
+  const uniqueDiagnoses = useMemo(() => {
+    const diagnoses = new Set<string>();
+    beds.forEach((bed) => {
+      if (bed.resident?.diagnosis) {
+        diagnoses.add(bed.resident.diagnosis);
+      }
+    });
+    return Array.from(diagnoses).sort();
+  }, [beds]);
 
   // Calculate census statistics
   const censusStats = useMemo(() => {
@@ -126,6 +167,12 @@ export function Reports() {
           return false;
         }
 
+        // Apply diagnosis filter
+        if (selectedDiagnoses.size > 0) {
+          if (!b.resident?.diagnosis) return false;
+          if (!selectedDiagnoses.has(b.resident.diagnosis)) return false;
+        }
+
         // Apply date range filter only for occupied beds with residents
         if (b.status === 'occupied' && b.resident && (dateFrom || dateTo)) {
           const admissionDate = b.resident.admission_date;
@@ -152,6 +199,7 @@ export function Reports() {
         room: `${bed.room?.room_number}${bed.bed_letter}`,
         wing: bed.room?.wing?.name || '',
         status: bed.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        diagnosis: bed.resident?.diagnosis || '-',
         isolation: bed.resident?.is_isolation
           ? bed.resident.isolation_type
             ? bed.resident.isolation_type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
@@ -164,7 +212,7 @@ export function Reports() {
           ? formatDate(bed.resident.admission_date)
           : '-',
       }));
-  }, [beds, dateFrom, dateTo, selectedStatuses, isolationFilter]);
+  }, [beds, dateFrom, dateTo, selectedStatuses, isolationFilter, selectedDiagnoses]);
 
   // Get enabled columns for custom report
   const enabledColumns: ColumnDef[] = customFields
@@ -195,11 +243,29 @@ export function Reports() {
     if (reportType === 'census') {
       exportCensusToPDF(censusStats, wingBreakdown, `daily-census-${dateStr}`);
     } else {
+      // Build filter details for PDF
+      const filters: ReportFilters = {
+        wing: selectedWing ? selectedWing.name : 'All Wings',
+        statuses: Array.from(selectedStatuses).map((s) =>
+          s.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+        ),
+        isolation:
+          isolationFilter === 'all'
+            ? 'All Residents'
+            : isolationFilter === 'isolation'
+            ? 'Isolation Only'
+            : 'Non-Isolation Only',
+        diagnoses: Array.from(selectedDiagnoses),
+        dateFrom: dateFrom ? formatDate(dateFrom) : undefined,
+        dateTo: dateTo ? formatDate(dateTo) : undefined,
+      };
+
       exportToPDF(
         customReportData,
         enabledColumns,
         'Resident Report',
-        `resident-report-${dateStr}`
+        `resident-report-${dateStr}`,
+        filters
       );
     }
   };
@@ -559,6 +625,81 @@ export function Reports() {
                 Non-Isolation Only
               </button>
             </div>
+          </div>
+
+          {/* Diagnosis Filter */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h3 className="font-semibold text-slate-900 mb-4">Filter by Diagnosis</h3>
+            <div className="relative" ref={diagnosisDropdownRef}>
+              <button
+                onClick={() => setDiagnosisDropdownOpen(!diagnosisDropdownOpen)}
+                className="flex items-center justify-between w-full max-w-md h-10 px-4 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+              >
+                <span className="text-sm text-slate-600">
+                  {selectedDiagnoses.size === 0
+                    ? 'All Diagnoses'
+                    : `${selectedDiagnoses.size} diagnosis${selectedDiagnoses.size !== 1 ? 'es' : ''} selected`}
+                </span>
+                <Icon
+                  name={diagnosisDropdownOpen ? 'expand_less' : 'expand_more'}
+                  size={20}
+                  className="text-slate-400"
+                />
+              </button>
+
+              {diagnosisDropdownOpen && (
+                <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  {uniqueDiagnoses.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-slate-500">
+                      No diagnoses found
+                    </div>
+                  ) : (
+                    <>
+                      <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-2">
+                        <button
+                          onClick={() => setSelectedDiagnoses(new Set())}
+                          className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                      {uniqueDiagnoses.map((diagnosis) => (
+                        <button
+                          key={diagnosis}
+                          onClick={() => toggleDiagnosis(diagnosis)}
+                          className="flex items-center gap-3 w-full px-4 py-2 text-left hover:bg-slate-50 transition-colors"
+                        >
+                          <Icon
+                            name={selectedDiagnoses.has(diagnosis) ? 'check_box' : 'check_box_outline_blank'}
+                            size={18}
+                            className={selectedDiagnoses.has(diagnosis) ? 'text-primary-500' : 'text-slate-400'}
+                          />
+                          <span className="text-sm text-slate-700">{diagnosis}</span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+            {selectedDiagnoses.size > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {Array.from(selectedDiagnoses).map((diagnosis) => (
+                  <span
+                    key={diagnosis}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-primary-50 text-primary-700 rounded-md text-xs font-medium"
+                  >
+                    {diagnosis}
+                    <button
+                      onClick={() => toggleDiagnosis(diagnosis)}
+                      className="hover:text-primary-900"
+                    >
+                      <Icon name="close" size={14} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Date Range Filter */}
