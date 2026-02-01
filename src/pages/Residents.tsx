@@ -38,6 +38,8 @@ export function Residents() {
   const [showDischargedTab, setShowDischargedTab] = useState(false);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
   const [showIsolationModal, setShowIsolationModal] = useState(false);
+  const [showDischargeModal, setShowDischargeModal] = useState(false);
+  const [dischargeDate, setDischargeDate] = useState(new Date().toISOString().split('T')[0]);
   const [isolationType, setIsolationType] = useState<IsolationType>('respiratory');
   const [actionLoading, setActionLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,9 +91,11 @@ export function Residents() {
   const handleDischarge = async () => {
     if (!selectedResident) return;
     setActionLoading(true);
-    await dischargeResident(selectedResident.id);
+    await dischargeResident(selectedResident.id, undefined, dischargeDate);
     setActionLoading(false);
+    setShowDischargeModal(false);
     setSelectedResident(null);
+    setDischargeDate(new Date().toISOString().split('T')[0]);
   };
 
   const handleToggleIsolation = async () => {
@@ -524,7 +528,13 @@ export function Residents() {
                   >
                     {selectedResident.is_isolation ? 'Remove Isolation' : 'Set Isolation'}
                   </Button>
-                  <Button variant="danger" onClick={handleDischarge} loading={actionLoading}>
+                  <Button
+                    variant="danger"
+                    onClick={() => {
+                      setDischargeDate(new Date().toISOString().split('T')[0]);
+                      setShowDischargeModal(true);
+                    }}
+                  >
                     Discharge
                   </Button>
                 </>
@@ -570,6 +580,45 @@ export function Residents() {
             </Button>
             <Button onClick={handleToggleIsolation} loading={actionLoading}>
               Confirm
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Discharge Modal */}
+      <Modal
+        isOpen={showDischargeModal}
+        onClose={() => setShowDischargeModal(false)}
+        title="Discharge Resident"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            You are about to discharge{' '}
+            <span className="font-semibold">
+              {selectedResident?.first_name} {selectedResident?.last_name}
+            </span>
+            . This will remove them from their assigned bed.
+          </p>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-900 mb-1">
+              Discharge Date *
+            </label>
+            <input
+              type="date"
+              value={dischargeDate}
+              onChange={(e) => setDischargeDate(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowDischargeModal(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDischarge} loading={actionLoading}>
+              Confirm Discharge
             </Button>
           </div>
         </div>

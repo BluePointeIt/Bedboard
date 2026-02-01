@@ -149,7 +149,7 @@ export function useResidents() {
   }, []);
 
   const dischargeResident = useCallback(
-    async (id: string, notes?: string) => {
+    async (id: string, notes?: string, dischargeDate?: string) => {
       // First get the resident to check if they have a bed assigned
       const resident = residents.find((r) => r.id === id);
 
@@ -161,14 +161,14 @@ export function useResidents() {
           .eq('id', resident.bed_id);
       }
 
-      // Set discharge date to today
-      const today = new Date().toISOString().split('T')[0];
+      // Use provided discharge date or default to today
+      const date = dischargeDate || new Date().toISOString().split('T')[0];
 
       return updateResident({
         id,
         status: 'discharged',
         bed_id: null,
-        discharge_date: today,
+        discharge_date: date,
         notes: notes,
       });
     },
