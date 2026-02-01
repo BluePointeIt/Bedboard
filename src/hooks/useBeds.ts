@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import type { BedStatus, FilterOptions, Gender } from '../types';
+import type { BedStatus, FilterOptions, Gender, Resident } from '../types';
 import type { BedWithDetails } from '../components/BedCard';
+import {
+  calculateBedCompatibility,
+  analyzeOccupancyOptimization,
+  type BedCompatibilityScore,
+  type MoveRecommendation,
+} from '../lib/compatibilityUtils';
 
 const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -529,6 +535,294 @@ export function useBedActions() {
     return residents[0].gender as Gender;
   };
 
+  /**
+   * Get scored bed recommendations for a resident.
+   * Returns all vacant, compatible beds sorted by compatibility score.
+   */
+  const getBedRecommendations = async (
+    residentId: string
+  ): Promise<BedCompatibilityScore[]> => {
+    if (!supabaseConfigured) {
+      return [];
+    }
+
+    // Get the resident
+    const { data: resident, error: residentError } = await supabase
+      .from('residents')
+      .select('*')
+      .eq('id', residentId)
+      .single();
+
+    if (residentError || !resident) {
+      return [];
+    }
+
+    // Get all vacant beds with room and wing info
+    const { data: vacantBeds } = await supabase
+      .from('beds')
+      .select(`
+        *,
+        room:rooms!inner(
+          id,
+          room_number,
+          has_shared_bathroom,
+          shared_bathroom_group_id,
+          wing:wings!inner(id, name)
+        )
+      `)
+      .eq('status', 'vacant');
+
+    if (!vacantBeds || vacantBeds.length === 0) {
+      return [];
+    }
+
+    // Get all beds with their residents to understand room occupancy
+    const { data: allBeds } = await supabase
+      .from('beds')
+      .select(`
+        id,
+        room_id,
+        bed_letter,
+        status,
+        room:rooms!inner(
+          id,
+          room_number,
+          has_shared_bathroom,
+          shared_bathroom_group_id,
+          wing:wings!inner(id, name)
+        )
+      `);
+
+    // Get all active residents with beds
+    const { data: allResidents } = await supabase
+      .from('residents')
+      .select('*')
+      .eq('status', 'active')
+      .not('bed_id', 'is', null);
+
+    // Create a map of bed_id to resident
+    const residentsByBedId = new Map<string, Resident>();
+    if (allResidents) {
+      for (const r of allResidents) {
+        if (r.bed_id) {
+          residentsByBedId.set(r.bed_id, r as Resident);
+        }
+      }
+    }
+
+    // Group beds by room
+    const roomToBeds = new Map<string, Array<{
+      bedId: string;
+      bedLetter: string;
+      status: string;
+      resident?: Resident;
+    }>>();
+
+    if (allBeds) {
+      for (const bed of allBeds) {
+        const roomId = bed.room_id;
+        if (!roomToBeds.has(roomId)) {
+          roomToBeds.set(roomId, []);
+        }
+        roomToBeds.get(roomId)!.push({
+          bedId: bed.id,
+          bedLetter: bed.bed_letter,
+          status: bed.status,
+          resident: residentsByBedId.get(bed.id),
+        });
+      }
+    }
+
+    // Calculate compatibility scores for each vacant bed
+    const scores: BedCompatibilityScore[] = [];
+
+    for (const bed of vacantBeds) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const roomData = bed.room as any;
+      const roomId = roomData.id as string;
+
+      // Get room info
+      const bedsInRoom = roomToBeds.get(roomId) || [];
+      const occupiedBeds = bedsInRoom.filter(b => b.resident);
+      const roomGender = occupiedBeds.length > 0 ? occupiedBeds[0].resident?.gender || null : null;
+
+      // Check gender compatibility first
+      if (roomGender && roomGender !== resident.gender) {
+        continue; // Skip beds with gender mismatch
+      }
+
+      // Check shared bathroom compatibility
+      if (roomData.has_shared_bathroom && roomData.shared_bathroom_group_id) {
+        // Get all rooms in bathroom group
+        const { data: bathroomRooms } = await supabase
+          .from('rooms')
+          .select('id')
+          .eq('shared_bathroom_group_id', roomData.shared_bathroom_group_id);
+
+        if (bathroomRooms) {
+          const bathroomRoomIds = bathroomRooms.map(r => r.id);
+          let bathroomGender: Gender | null = null;
+
+          for (const brId of bathroomRoomIds) {
+            const brBeds = roomToBeds.get(brId) || [];
+            for (const brBed of brBeds) {
+              if (brBed.resident) {
+                bathroomGender = brBed.resident.gender;
+                break;
+              }
+            }
+            if (bathroomGender) break;
+          }
+
+          if (bathroomGender && bathroomGender !== resident.gender) {
+            continue; // Skip beds with bathroom gender mismatch
+          }
+        }
+      }
+
+      // Check isolation compatibility
+      const hasIsolationResident = occupiedBeds.some(b => b.resident?.is_isolation);
+      const hasNonIsolationResident = occupiedBeds.some(b => b.resident && !b.resident.is_isolation);
+
+      if (hasIsolationResident && !resident.is_isolation) {
+        continue; // Non-isolation can't room with isolation
+      }
+      if (hasNonIsolationResident && resident.is_isolation) {
+        continue; // Isolation can't room with non-isolation
+      }
+
+      const roomInfo = {
+        id: roomId,
+        roomNumber: roomData.room_number,
+        bedsInRoom,
+        gender: roomGender,
+        hasSharedBathroom: roomData.has_shared_bathroom,
+        sharedBathroomGroupId: roomData.shared_bathroom_group_id,
+      };
+
+      const bedForCalc = {
+        ...bed,
+        room: {
+          room_number: roomData.room_number,
+          wing: { name: roomData.wing?.name || '', id: roomData.wing?.id || '' },
+        },
+      };
+
+      const score = calculateBedCompatibility(resident as Resident, bedForCalc, roomInfo);
+      scores.push(score);
+    }
+
+    // Sort by total score (highest first)
+    scores.sort((a, b) => b.totalScore - a.totalScore);
+
+    // Mark top recommendation
+    if (scores.length > 0) {
+      scores[0].recommended = true;
+    }
+
+    return scores;
+  };
+
+  /**
+   * Get move optimization suggestions to improve bed availability.
+   */
+  const getMoveOptimizations = async (
+    unassignedResidents: Resident[]
+  ): Promise<MoveRecommendation[]> => {
+    if (!supabaseConfigured) {
+      return [];
+    }
+
+    // Get all beds with room info
+    const { data: allBeds } = await supabase
+      .from('beds')
+      .select(`
+        id,
+        room_id,
+        bed_letter,
+        status,
+        room:rooms!inner(
+          id,
+          room_number,
+          has_shared_bathroom,
+          shared_bathroom_group_id,
+          wing:wings!inner(id, name)
+        )
+      `);
+
+    if (!allBeds) {
+      return [];
+    }
+
+    // Get all active residents with beds
+    const { data: allResidents } = await supabase
+      .from('residents')
+      .select('*')
+      .eq('status', 'active')
+      .not('bed_id', 'is', null);
+
+    // Create a map of bed_id to resident
+    const residentsByBedId = new Map<string, Resident>();
+    if (allResidents) {
+      for (const r of allResidents) {
+        if (r.bed_id) {
+          residentsByBedId.set(r.bed_id, r as Resident);
+        }
+      }
+    }
+
+    // Group beds by room and build room info
+    const roomsMap = new Map<string, {
+      roomId: string;
+      roomNumber: string;
+      wingName: string;
+      beds: Array<{
+        bedId: string;
+        bedLetter: string;
+        status: string;
+        resident?: Resident;
+      }>;
+      currentGender: Gender | null;
+      hasSharedBathroom: boolean;
+      sharedBathroomGroupId: string | null;
+    }>();
+
+    for (const bed of allBeds) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const roomData = bed.room as any;
+      const roomId = bed.room_id;
+
+      if (!roomsMap.has(roomId)) {
+        roomsMap.set(roomId, {
+          roomId,
+          roomNumber: roomData.room_number,
+          wingName: roomData.wing?.name || '',
+          beds: [],
+          currentGender: null,
+          hasSharedBathroom: roomData.has_shared_bathroom,
+          sharedBathroomGroupId: roomData.shared_bathroom_group_id,
+        });
+      }
+
+      const resident = residentsByBedId.get(bed.id);
+      roomsMap.get(roomId)!.beds.push({
+        bedId: bed.id,
+        bedLetter: bed.bed_letter,
+        status: bed.status,
+        resident,
+      });
+
+      // Set room gender based on any occupied bed
+      if (resident && !roomsMap.get(roomId)!.currentGender) {
+        roomsMap.get(roomId)!.currentGender = resident.gender;
+      }
+    }
+
+    const rooms = Array.from(roomsMap.values());
+
+    return analyzeOccupancyOptimization(rooms, unassignedResidents);
+  };
+
   return {
     updateBedStatus,
     assignResident,
@@ -538,5 +832,7 @@ export function useBedActions() {
     getNextAvailableBedLetter,
     checkGenderCompatibility,
     getRequiredGenderForBed,
+    getBedRecommendations,
+    getMoveOptimizations,
   };
 }

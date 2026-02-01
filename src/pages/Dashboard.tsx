@@ -7,6 +7,12 @@ import { useState, useEffect, useMemo } from 'react';
 import type { BedWithDetails } from '../components/BedCard';
 import type { LayoutContext } from '../components/AppLayout';
 import type { Gender } from '../types';
+import {
+  calculateAge,
+  getCompatibilityLabel,
+  type BedCompatibilityScore,
+  type MoveRecommendation,
+} from '../lib/compatibilityUtils';
 
 export function Dashboard() {
   const { searchQuery, selectedWingId, wings } = useOutletContext<LayoutContext>();
@@ -23,12 +29,22 @@ export function Dashboard() {
   const [requiredGenderForBed, setRequiredGenderForBed] = useState<Gender | null>(null);
   const [moveTargetCompatibility, setMoveTargetCompatibility] = useState<GenderCompatibilityResult | null>(null);
 
+  // Bed recommendations state
+  const [bedRecommendations, setBedRecommendations] = useState<BedCompatibilityScore[]>([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [moveOptimizations, setMoveOptimizations] = useState<MoveRecommendation[]>([]);
+  const [showOptimizations, setShowOptimizations] = useState(false);
+
+  // Move modal recommendations state
+  const [moveBedRecommendations, setMoveBedRecommendations] = useState<BedCompatibilityScore[]>([]);
+  const [moveRecommendationsLoading, setMoveRecommendationsLoading] = useState(false);
+
   const { beds, loading } = useBeds({
     wing_id: selectedWingId,
     search: searchQuery || undefined,
   });
   const { residents: unassignedResidents } = useUnassignedResidents();
-  const { updateBedStatus, assignResident, unassignResident, checkGenderCompatibility, getRequiredGenderForBed } = useBedActions();
+  const { updateBedStatus, assignResident, unassignResident, checkGenderCompatibility, getRequiredGenderForBed, getBedRecommendations, getMoveOptimizations } = useBedActions();
 
   // Get the selected wing name for the header
   const selectedWing = wings.find((w) => w.id === selectedWingId);
@@ -56,6 +72,28 @@ export function Dashboard() {
     }
   }, [selectedResidentId, selectedBed, unassignedResidents]);
 
+  // Fetch bed recommendations when a resident is selected
+  useEffect(() => {
+    if (selectedResidentId && showAssignModal) {
+      setRecommendationsLoading(true);
+      getBedRecommendations(selectedResidentId)
+        .then(setBedRecommendations)
+        .finally(() => setRecommendationsLoading(false));
+    } else {
+      setBedRecommendations([]);
+    }
+  }, [selectedResidentId, showAssignModal]);
+
+  // Fetch move optimizations when assign modal opens
+  useEffect(() => {
+    if (showAssignModal && unassignedResidents.length > 0) {
+      getMoveOptimizations(unassignedResidents).then(setMoveOptimizations);
+    } else {
+      setMoveOptimizations([]);
+      setShowOptimizations(false);
+    }
+  }, [showAssignModal, unassignedResidents]);
+
   // Check gender compatibility when a target bed is selected for move
   useEffect(() => {
     if (selectedTargetBedId && selectedBed?.resident) {
@@ -64,6 +102,18 @@ export function Dashboard() {
       setMoveTargetCompatibility(null);
     }
   }, [selectedTargetBedId, selectedBed]);
+
+  // Fetch bed recommendations when move modal opens
+  useEffect(() => {
+    if (showMoveModal && selectedBed?.resident) {
+      setMoveRecommendationsLoading(true);
+      getBedRecommendations(selectedBed.resident.id)
+        .then(setMoveBedRecommendations)
+        .finally(() => setMoveRecommendationsLoading(false));
+    } else {
+      setMoveBedRecommendations([]);
+    }
+  }, [showMoveModal, selectedBed?.resident?.id]);
 
   const handleAssignResident = async () => {
     if (!selectedBed || !selectedResidentId) return;
@@ -560,9 +610,12 @@ export function Dashboard() {
           setShowAssignModal(false);
           setSelectedResidentId('');
           setGenderCompatibility(null);
+          setBedRecommendations([]);
+          setMoveOptimizations([]);
+          setShowOptimizations(false);
         }}
         title="Assign Resident"
-        size="md"
+        size="lg"
       >
         <div className="space-y-4">
           {/* Gender requirement info */}
@@ -598,19 +651,10 @@ export function Dashboard() {
               <option value="">Choose a resident...</option>
               {unassignedResidents.map((resident) => {
                 const isCompatible = !requiredGenderForBed || resident.gender === requiredGenderForBed;
-                // Calculate age from date of birth
-                let ageStr = '';
-                if (resident.date_of_birth) {
-                  const dob = new Date(resident.date_of_birth);
-                  const today = new Date();
-                  let age = today.getFullYear() - dob.getFullYear();
-                  const monthDiff = today.getMonth() - dob.getMonth();
-                  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-                    age--;
-                  }
-                  ageStr = `, ${age}yo`;
-                }
+                const age = calculateAge(resident.date_of_birth);
+                const ageStr = age !== null ? `, ${age}yo` : '';
                 const isolationStr = resident.is_isolation ? ' - ISOLATION' : '';
+                const diagnosisStr = resident.diagnosis ? `, ${resident.diagnosis}` : '';
                 return (
                   <option
                     key={resident.id}
@@ -618,7 +662,7 @@ export function Dashboard() {
                     disabled={!isCompatible}
                     className={!isCompatible ? 'text-gray-400' : ''}
                   >
-                    {resident.first_name} {resident.last_name} ({resident.gender === 'male' ? 'M' : resident.gender === 'female' ? 'F' : 'O'}{ageStr}){isolationStr}
+                    {resident.first_name} {resident.last_name} ({resident.gender === 'male' ? 'M' : resident.gender === 'female' ? 'F' : 'O'}{ageStr}{diagnosisStr}){isolationStr}
                     {!isCompatible ? ' (incompatible gender)' : ''}
                   </option>
                 );
@@ -636,13 +680,205 @@ export function Dashboard() {
             )}
           </div>
 
-          <div className="flex justify-end gap-2">
+          {/* Bed Recommendations Section */}
+          {selectedResidentId && (
+            <div className="border-t border-slate-200 pt-4">
+              <h4 className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-3">
+                <Icon name="recommend" size={16} className="text-amber-500" />
+                Recommended Beds
+              </h4>
+
+              {recommendationsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500" />
+                  <span className="ml-2 text-sm text-slate-500">Analyzing compatibility...</span>
+                </div>
+              ) : bedRecommendations.length === 0 ? (
+                <p className="text-sm text-slate-500 py-2">No compatible beds available for this resident.</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {/* Top Recommendation */}
+                  {bedRecommendations[0] && (
+                    <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <Icon name="star" size={18} className="text-amber-500" />
+                          <span className="font-semibold text-slate-900">
+                            Room {bedRecommendations[0].bedInfo.roomNumber}{bedRecommendations[0].bedInfo.bedLetter}
+                          </span>
+                          <span className="text-xs text-slate-500">- {bedRecommendations[0].bedInfo.wingName}</span>
+                        </div>
+                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
+                          {bedRecommendations[0].totalScore}% match
+                        </span>
+                      </div>
+                      {bedRecommendations[0].roommate && (
+                        <div className="mt-2 text-sm text-slate-600">
+                          <span className="font-medium">Roommate:</span> {bedRecommendations[0].roommate.name}
+                          {bedRecommendations[0].roommate.age !== null && ` (${bedRecommendations[0].roommate.age}yo)`}
+                          {bedRecommendations[0].roommate.diagnosis && `, ${bedRecommendations[0].roommate.diagnosis}`}
+                        </div>
+                      )}
+                      {!bedRecommendations[0].roommate && (
+                        <div className="mt-2 text-sm text-slate-600">
+                          <span className="font-medium">Empty room</span> - No roommate constraints
+                        </div>
+                      )}
+                      {bedRecommendations[0].warnings.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {bedRecommendations[0].warnings.map((warning, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded">
+                              <Icon name="warning" size={12} />
+                              {warning}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-2 flex gap-4 text-xs text-slate-500">
+                        <span>Age: {bedRecommendations[0].ageScore}%</span>
+                        <span>Diagnosis: {bedRecommendations[0].diagnosisScore}%</span>
+                        <span>Flexibility: {bedRecommendations[0].flexibilityScore}%</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other Recommendations */}
+                  {bedRecommendations.slice(1, 5).map((rec) => {
+                    const { color, icon } = getCompatibilityLabel(rec.totalScore);
+                    return (
+                      <div
+                        key={rec.bedId}
+                        className={`p-3 rounded-lg border ${
+                          color === 'green' ? 'bg-green-50/50 border-green-200' :
+                          color === 'yellow' ? 'bg-yellow-50/50 border-yellow-200' :
+                          'bg-orange-50/50 border-orange-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Icon
+                              name={icon === 'star' ? 'star' : icon === 'check' ? 'check_circle' : 'warning'}
+                              size={16}
+                              className={
+                                color === 'green' ? 'text-green-500' :
+                                color === 'yellow' ? 'text-yellow-500' :
+                                'text-orange-500'
+                              }
+                            />
+                            <span className="font-medium text-slate-800">
+                              Room {rec.bedInfo.roomNumber}{rec.bedInfo.bedLetter}
+                            </span>
+                            <span className="text-xs text-slate-500">- {rec.bedInfo.wingName}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                            color === 'green' ? 'bg-green-100 text-green-700' :
+                            color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-orange-100 text-orange-700'
+                          }`}>
+                            {rec.totalScore}% match
+                          </span>
+                        </div>
+                        {rec.roommate && (
+                          <div className="mt-1 text-sm text-slate-600">
+                            {rec.roommate.name}
+                            {rec.roommate.age !== null && ` (${rec.roommate.age}yo)`}
+                          </div>
+                        )}
+                        {rec.warnings.length > 0 && (
+                          <div className="mt-1 text-xs text-orange-600">
+                            {rec.warnings.join(' | ')}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {bedRecommendations.length > 5 && (
+                    <p className="text-xs text-slate-500 text-center pt-2">
+                      +{bedRecommendations.length - 5} more beds available
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Move Optimization Suggestions */}
+          {moveOptimizations.length > 0 && (
+            <div className="border-t border-slate-200 pt-4">
+              <button
+                onClick={() => setShowOptimizations(!showOptimizations)}
+                className="w-full flex items-center justify-between text-slate-700 text-sm font-semibold hover:text-slate-900 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon name="lightbulb" size={16} className="text-violet-500" />
+                  Optimization Suggestions
+                  <span className="px-1.5 py-0.5 bg-violet-100 text-violet-700 text-xs rounded-full">
+                    {moveOptimizations.length}
+                  </span>
+                </div>
+                <Icon
+                  name={showOptimizations ? 'expand_less' : 'expand_more'}
+                  size={20}
+                  className="text-slate-400"
+                />
+              </button>
+
+              {showOptimizations && (
+                <div className="mt-3 space-y-2">
+                  {moveOptimizations.slice(0, 3).map((opt) => (
+                    <div
+                      key={opt.residentId}
+                      className="p-3 bg-violet-50 border border-violet-200 rounded-lg"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">
+                            Move {opt.residentName}
+                          </p>
+                          <p className="text-xs text-slate-600 mt-0.5">
+                            {opt.currentBed} → {opt.suggestedBed}
+                          </p>
+                          <p className="text-xs text-violet-600 mt-1">
+                            {opt.reason}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={async () => {
+                            setActionLoading(true);
+                            await unassignResident(opt.residentId, opt.currentBedId);
+                            await assignResident(opt.suggestedBedId, opt.residentId);
+                            setActionLoading(false);
+                            // Refresh recommendations
+                            if (selectedResidentId) {
+                              getBedRecommendations(selectedResidentId).then(setBedRecommendations);
+                            }
+                            getMoveOptimizations(unassignedResidents).then(setMoveOptimizations);
+                          }}
+                          loading={actionLoading}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
             <Button
               variant="secondary"
               onClick={() => {
                 setShowAssignModal(false);
                 setSelectedResidentId('');
                 setGenderCompatibility(null);
+                setBedRecommendations([]);
+                setMoveOptimizations([]);
+                setShowOptimizations(false);
               }}
             >
               Cancel
@@ -665,9 +901,10 @@ export function Dashboard() {
           setShowMoveModal(false);
           setSelectedTargetBedId('');
           setMoveTargetCompatibility(null);
+          setMoveBedRecommendations([]);
         }}
         title="Move Resident"
-        size="md"
+        size="lg"
       >
         <div className="space-y-4">
           {selectedBed?.resident && (
@@ -676,7 +913,9 @@ export function Dashboard() {
               <p className="font-semibold text-slate-900">
                 {selectedBed.resident.first_name} {selectedBed.resident.last_name}
                 <span className="ml-2 text-xs font-normal text-slate-500">
-                  ({selectedBed.resident.gender === 'male' ? 'Male' : selectedBed.resident.gender === 'female' ? 'Female' : 'Other'})
+                  ({selectedBed.resident.gender === 'male' ? 'Male' : selectedBed.resident.gender === 'female' ? 'Female' : 'Other'}
+                  {selectedBed.resident.date_of_birth && `, ${calculateAge(selectedBed.resident.date_of_birth)}yo`}
+                  {selectedBed.resident.diagnosis && `, ${selectedBed.resident.diagnosis}`})
                 </span>
               </p>
               <p className="text-sm text-slate-500">
@@ -693,10 +932,144 @@ export function Dashboard() {
             </div>
           )}
 
+          {/* Bed Recommendations Section */}
+          <div className="border-t border-slate-200 pt-4">
+            <h4 className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-3">
+              <Icon name="recommend" size={16} className="text-amber-500" />
+              Recommended Beds
+            </h4>
+
+            {moveRecommendationsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500" />
+                <span className="ml-2 text-sm text-slate-500">Analyzing compatibility...</span>
+              </div>
+            ) : moveBedRecommendations.length === 0 ? (
+              <p className="text-sm text-slate-500 py-2">No compatible beds available.</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {/* Top Recommendation */}
+                {moveBedRecommendations[0] && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTargetBedId(moveBedRecommendations[0].bedId)}
+                    className={`w-full text-left p-3 rounded-lg border transition-all ${
+                      selectedTargetBedId === moveBedRecommendations[0].bedId
+                        ? 'bg-amber-100 border-amber-400 ring-2 ring-amber-300'
+                        : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 hover:border-amber-300'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Icon name="star" size={18} className="text-amber-500" />
+                        <span className="font-semibold text-slate-900">
+                          Room {moveBedRecommendations[0].bedInfo.roomNumber}{moveBedRecommendations[0].bedInfo.bedLetter}
+                        </span>
+                        <span className="text-xs text-slate-500">- {moveBedRecommendations[0].bedInfo.wingName}</span>
+                      </div>
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
+                        {moveBedRecommendations[0].totalScore}% match
+                      </span>
+                    </div>
+                    {moveBedRecommendations[0].roommate && (
+                      <div className="mt-2 text-sm text-slate-600">
+                        <span className="font-medium">Roommate:</span> {moveBedRecommendations[0].roommate.name}
+                        {moveBedRecommendations[0].roommate.age !== null && ` (${moveBedRecommendations[0].roommate.age}yo)`}
+                        {moveBedRecommendations[0].roommate.diagnosis && `, ${moveBedRecommendations[0].roommate.diagnosis}`}
+                      </div>
+                    )}
+                    {!moveBedRecommendations[0].roommate && (
+                      <div className="mt-2 text-sm text-slate-600">
+                        <span className="font-medium">Empty room</span> - No roommate constraints
+                      </div>
+                    )}
+                    {moveBedRecommendations[0].warnings.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {moveBedRecommendations[0].warnings.map((warning, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded">
+                            <Icon name="warning" size={12} />
+                            {warning}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-2 flex gap-4 text-xs text-slate-500">
+                      <span>Age: {moveBedRecommendations[0].ageScore}%</span>
+                      <span>Diagnosis: {moveBedRecommendations[0].diagnosisScore}%</span>
+                      <span>Flexibility: {moveBedRecommendations[0].flexibilityScore}%</span>
+                    </div>
+                  </button>
+                )}
+
+                {/* Other Recommendations */}
+                {moveBedRecommendations.slice(1, 5).map((rec) => {
+                  const { color, icon } = getCompatibilityLabel(rec.totalScore);
+                  return (
+                    <button
+                      key={rec.bedId}
+                      type="button"
+                      onClick={() => setSelectedTargetBedId(rec.bedId)}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        selectedTargetBedId === rec.bedId
+                          ? 'ring-2 ring-primary-300 border-primary-400 bg-primary-50'
+                          : color === 'green' ? 'bg-green-50/50 border-green-200 hover:border-green-300' :
+                            color === 'yellow' ? 'bg-yellow-50/50 border-yellow-200 hover:border-yellow-300' :
+                            'bg-orange-50/50 border-orange-200 hover:border-orange-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Icon
+                            name={icon === 'star' ? 'star' : icon === 'check' ? 'check_circle' : 'warning'}
+                            size={16}
+                            className={
+                              color === 'green' ? 'text-green-500' :
+                              color === 'yellow' ? 'text-yellow-500' :
+                              'text-orange-500'
+                            }
+                          />
+                          <span className="font-medium text-slate-800">
+                            Room {rec.bedInfo.roomNumber}{rec.bedInfo.bedLetter}
+                          </span>
+                          <span className="text-xs text-slate-500">- {rec.bedInfo.wingName}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          color === 'green' ? 'bg-green-100 text-green-700' :
+                          color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-orange-100 text-orange-700'
+                        }`}>
+                          {rec.totalScore}% match
+                        </span>
+                      </div>
+                      {rec.roommate && (
+                        <div className="mt-1 text-sm text-slate-600">
+                          {rec.roommate.name}
+                          {rec.roommate.age !== null && ` (${rec.roommate.age}yo)`}
+                        </div>
+                      )}
+                      {rec.warnings.length > 0 && (
+                        <div className="mt-1 text-xs text-orange-600">
+                          {rec.warnings.join(' | ')}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {moveBedRecommendations.length > 5 && (
+                  <p className="text-xs text-slate-500 text-center pt-2">
+                    +{moveBedRecommendations.length - 5} more beds available
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Manual bed selection fallback */}
           <div>
             <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
               <Icon name="bed" size={16} className="text-slate-400" />
-              Select New Bed
+              Or Select Manually
             </label>
             <select
               value={selectedTargetBedId}
@@ -704,29 +1077,31 @@ export function Dashboard() {
               className="w-full h-12 px-4 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
             >
               <option value="">Choose a vacant bed...</option>
-              {vacantBeds.map((bed) => (
-                <option key={bed.id} value={bed.id}>
-                  {bed.room?.wing?.name} - Room {bed.room?.room_number} - Bed {bed.bed_letter}
-                </option>
-              ))}
+              {vacantBeds.map((bed) => {
+                const rec = moveBedRecommendations.find(r => r.bedId === bed.id);
+                return (
+                  <option key={bed.id} value={bed.id}>
+                    {bed.room?.wing?.name} - Room {bed.room?.room_number} - Bed {bed.bed_letter}
+                    {rec ? ` (${rec.totalScore}% match)` : ''}
+                  </option>
+                );
+              })}
             </select>
             {vacantBeds.length === 0 && (
               <p className="text-sm text-slate-500 mt-2">
                 No vacant beds available to move to.
               </p>
             )}
-            <p className="text-xs text-slate-500 mt-2">
-              Note: Semi-private rooms and shared bathrooms require same-gender residents.
-            </p>
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
             <Button
               variant="secondary"
               onClick={() => {
                 setShowMoveModal(false);
                 setSelectedTargetBedId('');
                 setMoveTargetCompatibility(null);
+                setMoveBedRecommendations([]);
               }}
             >
               Cancel
