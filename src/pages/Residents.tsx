@@ -361,6 +361,11 @@ export function Residents() {
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Admission Date
               </th>
+              {showDischargedTab && (
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Discharge Date
+                </th>
+              )}
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Status
               </th>
@@ -372,7 +377,7 @@ export function Residents() {
           <tbody className="divide-y divide-slate-200">
             {filteredResidents.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={showDischargedTab ? 9 : 8} className="px-6 py-12 text-center text-slate-500">
                   No residents found
                 </td>
               </tr>
@@ -424,6 +429,11 @@ export function Residents() {
                   <td className="px-6 py-4 text-sm text-slate-500">
                     {formatDate(resident.admission_date)}
                   </td>
+                  {showDischargedTab && (
+                    <td className="px-6 py-4 text-sm text-slate-500">
+                      {resident.discharge_date ? formatDate(resident.discharge_date) : '-'}
+                    </td>
+                  )}
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
@@ -484,6 +494,12 @@ export function Residents() {
                 <p className="text-sm text-slate-500">Admission Date</p>
                 <p className="font-medium text-slate-900">{formatDate(selectedResident.admission_date)}</p>
               </div>
+              {selectedResident.status === 'discharged' && selectedResident.discharge_date && (
+                <div>
+                  <p className="text-sm text-slate-500">Discharge Date</p>
+                  <p className="font-medium text-slate-900">{formatDate(selectedResident.discharge_date)}</p>
+                </div>
+              )}
               <div>
                 <p className="text-sm text-slate-500">Status</p>
                 <p className="font-medium text-slate-900 capitalize">{selectedResident.status}</p>
