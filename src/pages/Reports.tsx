@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Icon } from '../components';
 import { useBeds } from '../hooks/useBeds';
+import { useResidents } from '../hooks/useResidents';
 import type { LayoutContext } from '../components/AppLayout';
 import {
   exportToExcel,
@@ -47,6 +48,21 @@ export function Reports() {
 
   // Isolation filter for custom reports
   const [isolationFilter, setIsolationFilter] = useState<'all' | 'isolation' | 'non-isolation'>('all');
+
+  // Resident status filter for custom reports (active vs discharged)
+  const [selectedResidentStatuses, setSelectedResidentStatuses] = useState<Set<string>>(new Set(['active']));
+
+  const toggleResidentStatus = (status: string) => {
+    setSelectedResidentStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  };
 
   // Gender filter for custom reports
   const [selectedGenders, setSelectedGenders] = useState<Set<string>>(new Set(['male', 'female']));
@@ -105,11 +121,15 @@ export function Reports() {
     { key: 'dischargeDate', label: 'Discharge Date', header: 'Discharged', enabled: false },
   ]);
 
-  const { beds, loading } = useBeds({
+  const { beds, loading: bedsLoading } = useBeds({
     wing_id: selectedWingId || undefined,
   });
 
-  // Get unique diagnoses from beds
+  const { residents, loading: residentsLoading } = useResidents();
+
+  const loading = bedsLoading || residentsLoading;
+
+  // Get unique diagnoses from beds and residents
   const uniqueDiagnoses = useMemo(() => {
     const diagnoses = new Set<string>();
     beds.forEach((bed) => {
@@ -117,8 +137,13 @@ export function Reports() {
         diagnoses.add(bed.resident.diagnosis);
       }
     });
+    residents.forEach((resident) => {
+      if (resident.diagnosis) {
+        diagnoses.add(resident.diagnosis);
+      }
+    });
     return Array.from(diagnoses).sort();
-  }, [beds]);
+  }, [beds, residents]);
 
   // Calculate census statistics
   const censusStats = useMemo(() => {
@@ -169,78 +194,164 @@ export function Reports() {
 
   // Generate custom report data
   const customReportData = useMemo(() => {
-    // Filter beds based on selected statuses
-    return beds
-      .filter((b) => {
-        // Filter by status
-        if (!selectedStatuses.has(b.status)) return false;
+    const results: Array<{
+      name: string;
+      room: string;
+      wing: string;
+      status: string;
+      gender: string;
+      diagnosis: string;
+      isolation: string;
+      payor: string;
+      admissionDate: string;
+      dischargeDate: string;
+    }> = [];
 
-        // Apply isolation filter
-        if (isolationFilter !== 'all' && b.resident) {
-          if (isolationFilter === 'isolation' && !b.resident.is_isolation) return false;
-          if (isolationFilter === 'non-isolation' && b.resident.is_isolation) return false;
-        } else if (isolationFilter === 'isolation' && !b.resident) {
-          // If filtering for isolation only, exclude beds without residents
-          return false;
-        }
+    // Add active residents from beds
+    if (selectedResidentStatuses.has('active')) {
+      beds
+        .filter((b) => {
+          // Filter by bed status
+          if (!selectedStatuses.has(b.status)) return false;
 
-        // Apply diagnosis filter
-        if (selectedDiagnoses.size > 0) {
-          if (!b.resident?.diagnosis) return false;
-          if (!selectedDiagnoses.has(b.resident.diagnosis)) return false;
-        }
-
-        // Apply gender filter (only for occupied beds with residents)
-        if (selectedGenders.size < 2 && b.status === 'occupied' && b.resident) {
-          if (!selectedGenders.has(b.resident.gender || '')) return false;
-        }
-
-        // Apply date range filter only for occupied beds with residents
-        if (b.status === 'occupied' && b.resident && (dateFrom || dateTo)) {
-          const admissionDate = b.resident.admission_date;
-          if (!admissionDate) return false;
-
-          const admission = new Date(admissionDate);
-          if (dateFrom) {
-            const from = new Date(dateFrom);
-            if (admission < from) return false;
+          // Apply isolation filter
+          if (isolationFilter !== 'all' && b.resident) {
+            if (isolationFilter === 'isolation' && !b.resident.is_isolation) return false;
+            if (isolationFilter === 'non-isolation' && b.resident.is_isolation) return false;
+          } else if (isolationFilter === 'isolation' && !b.resident) {
+            return false;
           }
-          if (dateTo) {
-            const to = new Date(dateTo);
-            to.setHours(23, 59, 59, 999); // Include the entire end date
-            if (admission > to) return false;
-          }
-        }
 
-        return true;
-      })
-      .map((bed) => ({
-        name: bed.resident
-          ? `${bed.resident.first_name} ${bed.resident.last_name}`
-          : '-',
-        room: `${bed.room?.room_number}${bed.bed_letter}`,
-        wing: bed.room?.wing?.name || '',
-        status: bed.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-        gender: bed.resident?.gender
-          ? bed.resident.gender.charAt(0).toUpperCase() + bed.resident.gender.slice(1)
-          : '-',
-        diagnosis: bed.resident?.diagnosis || '-',
-        isolation: bed.resident?.is_isolation
-          ? bed.resident.isolation_type
-            ? bed.resident.isolation_type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-            : 'Yes'
-          : '-',
-        payor: bed.resident?.payor
-          ? bed.resident.payor.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-          : '-',
-        admissionDate: bed.resident?.admission_date
-          ? formatDate(bed.resident.admission_date)
-          : '-',
-        dischargeDate: bed.resident?.discharge_date
-          ? formatDate(bed.resident.discharge_date)
-          : '-',
-      }));
-  }, [beds, dateFrom, dateTo, selectedStatuses, isolationFilter, selectedDiagnoses, selectedGenders]);
+          // Apply diagnosis filter
+          if (selectedDiagnoses.size > 0) {
+            if (!b.resident?.diagnosis) return false;
+            if (!selectedDiagnoses.has(b.resident.diagnosis)) return false;
+          }
+
+          // Apply gender filter
+          if (selectedGenders.size < 2 && b.status === 'occupied' && b.resident) {
+            if (!selectedGenders.has(b.resident.gender || '')) return false;
+          }
+
+          // Apply date range filter
+          if (b.status === 'occupied' && b.resident && (dateFrom || dateTo)) {
+            const admissionDate = b.resident.admission_date;
+            if (!admissionDate) return false;
+
+            const admission = new Date(admissionDate);
+            if (dateFrom) {
+              const from = new Date(dateFrom);
+              if (admission < from) return false;
+            }
+            if (dateTo) {
+              const to = new Date(dateTo);
+              to.setHours(23, 59, 59, 999);
+              if (admission > to) return false;
+            }
+          }
+
+          return true;
+        })
+        .forEach((bed) => {
+          results.push({
+            name: bed.resident
+              ? `${bed.resident.first_name} ${bed.resident.last_name}`
+              : '-',
+            room: `${bed.room?.room_number}${bed.bed_letter}`,
+            wing: bed.room?.wing?.name || '',
+            status: bed.status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+            gender: bed.resident?.gender
+              ? bed.resident.gender.charAt(0).toUpperCase() + bed.resident.gender.slice(1)
+              : '-',
+            diagnosis: bed.resident?.diagnosis || '-',
+            isolation: bed.resident?.is_isolation
+              ? bed.resident.isolation_type
+                ? bed.resident.isolation_type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+                : 'Yes'
+              : '-',
+            payor: bed.resident?.payor
+              ? bed.resident.payor.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+              : '-',
+            admissionDate: bed.resident?.admission_date
+              ? formatDate(bed.resident.admission_date)
+              : '-',
+            dischargeDate: bed.resident?.discharge_date
+              ? formatDate(bed.resident.discharge_date)
+              : '-',
+          });
+        });
+    }
+
+    // Add discharged residents
+    if (selectedResidentStatuses.has('discharged')) {
+      residents
+        .filter((r) => {
+          if (r.status !== 'discharged') return false;
+
+          // Apply isolation filter
+          if (isolationFilter === 'isolation' && !r.is_isolation) return false;
+          if (isolationFilter === 'non-isolation' && r.is_isolation) return false;
+
+          // Apply diagnosis filter
+          if (selectedDiagnoses.size > 0) {
+            if (!r.diagnosis) return false;
+            if (!selectedDiagnoses.has(r.diagnosis)) return false;
+          }
+
+          // Apply gender filter
+          if (selectedGenders.size < 2) {
+            if (!selectedGenders.has(r.gender || '')) return false;
+          }
+
+          // Apply date range filter on discharge date for discharged residents
+          if (dateFrom || dateTo) {
+            const dischargeDate = r.discharge_date;
+            if (!dischargeDate) return false;
+
+            const discharge = new Date(dischargeDate);
+            if (dateFrom) {
+              const from = new Date(dateFrom);
+              if (discharge < from) return false;
+            }
+            if (dateTo) {
+              const to = new Date(dateTo);
+              to.setHours(23, 59, 59, 999);
+              if (discharge > to) return false;
+            }
+          }
+
+          return true;
+        })
+        .forEach((r) => {
+          results.push({
+            name: `${r.first_name} ${r.last_name}`,
+            room: '-',
+            wing: '-',
+            status: 'Discharged',
+            gender: r.gender
+              ? r.gender.charAt(0).toUpperCase() + r.gender.slice(1)
+              : '-',
+            diagnosis: r.diagnosis || '-',
+            isolation: r.is_isolation
+              ? r.isolation_type
+                ? r.isolation_type.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+                : 'Yes'
+              : '-',
+            payor: r.payor
+              ? r.payor.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+              : '-',
+            admissionDate: r.admission_date
+              ? formatDate(r.admission_date)
+              : '-',
+            dischargeDate: r.discharge_date
+              ? formatDate(r.discharge_date)
+              : '-',
+          });
+        });
+    }
+
+    return results;
+  }, [beds, residents, dateFrom, dateTo, selectedStatuses, selectedResidentStatuses, isolationFilter, selectedDiagnoses, selectedGenders]);
 
   // Get enabled columns for custom report
   const enabledColumns: ColumnDef[] = customFields
@@ -553,7 +664,47 @@ export function Reports() {
             )}
           </div>
 
-          {/* Status Filter */}
+          {/* Resident Status Filter */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h3 className="font-semibold text-slate-900 mb-4">Filter by Resident Status</h3>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => toggleResidentStatus('active')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  selectedResidentStatuses.has('active')
+                    ? 'bg-primary-50 border-primary-300 text-primary-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={selectedResidentStatuses.has('active') ? 'check_box' : 'check_box_outline_blank'}
+                  size={18}
+                />
+                Active Residents
+              </button>
+              <button
+                onClick={() => toggleResidentStatus('discharged')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                  selectedResidentStatuses.has('discharged')
+                    ? 'bg-amber-50 border-amber-300 text-amber-700'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon
+                  name={selectedResidentStatuses.has('discharged') ? 'check_box' : 'check_box_outline_blank'}
+                  size={18}
+                />
+                Discharged Residents
+              </button>
+            </div>
+            {selectedResidentStatuses.size === 0 && (
+              <p className="mt-3 text-sm text-amber-600">
+                Please select at least one resident status.
+              </p>
+            )}
+          </div>
+
+          {/* Bed Status Filter */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h3 className="font-semibold text-slate-900 mb-4">Filter by Bed Status</h3>
             <div className="flex flex-wrap gap-3">

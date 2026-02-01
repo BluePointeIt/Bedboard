@@ -28,6 +28,7 @@ export interface UpdateResidentInput {
   gender?: Gender;
   date_of_birth?: string;
   admission_date?: string;
+  discharge_date?: string;
   payor?: PayorType;
   diagnosis?: string;
   is_isolation?: boolean;
@@ -160,10 +161,14 @@ export function useResidents() {
           .eq('id', resident.bed_id);
       }
 
+      // Set discharge date to today
+      const today = new Date().toISOString().split('T')[0];
+
       return updateResident({
         id,
         status: 'discharged',
         bed_id: null,
+        discharge_date: today,
         notes: notes,
       });
     },
