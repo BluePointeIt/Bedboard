@@ -51,6 +51,7 @@ export function Residents() {
   const [newResident, setNewResident] = useState<CreateResidentInput>({
     first_name: '',
     last_name: '',
+    medical_record_number: '',
     gender: 'male',
     date_of_birth: '',
     admission_date: new Date().toISOString().split('T')[0],
@@ -72,6 +73,7 @@ export function Residents() {
   const [editForm, setEditForm] = useState({
     first_name: '',
     last_name: '',
+    medical_record_number: '',
     gender: 'male' as Gender,
     date_of_birth: '',
     payor: 'private' as PayorType,
@@ -178,6 +180,7 @@ export function Residents() {
     setEditForm({
       first_name: selectedResident.first_name,
       last_name: selectedResident.last_name,
+      medical_record_number: selectedResident.medical_record_number || '',
       gender: selectedResident.gender,
       date_of_birth: selectedResident.date_of_birth || '',
       payor: selectedResident.payor,
@@ -203,6 +206,7 @@ export function Residents() {
       id: selectedResident.id,
       first_name: editForm.first_name,
       last_name: editForm.last_name,
+      medical_record_number: editForm.medical_record_number || undefined,
       gender: editForm.gender,
       date_of_birth: editForm.date_of_birth || undefined,
       payor: editForm.payor,
@@ -347,6 +351,9 @@ export function Residents() {
                 Name
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                MRN
+              </th>
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Gender
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -377,7 +384,7 @@ export function Residents() {
           <tbody className="divide-y divide-slate-200">
             {filteredResidents.length === 0 ? (
               <tr>
-                <td colSpan={showDischargedTab ? 9 : 8} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={showDischargedTab ? 10 : 9} className="px-6 py-12 text-center text-slate-500">
                   No residents found
                 </td>
               </tr>
@@ -409,6 +416,9 @@ export function Residents() {
                         )}
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-500 font-mono">
+                    {resident.medical_record_number || '-'}
                   </td>
                   <td className="px-6 py-4 text-sm text-slate-500 capitalize">{resident.gender}</td>
                   <td className="px-6 py-4 text-sm text-slate-500">
@@ -472,6 +482,12 @@ export function Residents() {
         {selectedResident && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-slate-500">Medical Record #</p>
+                <p className="font-medium text-slate-900 font-mono">
+                  {selectedResident.medical_record_number || '-'}
+                </p>
+              </div>
               <div>
                 <p className="text-sm text-slate-500">Gender</p>
                 <p className="font-medium text-slate-900 capitalize">{selectedResident.gender}</p>
@@ -684,6 +700,21 @@ export function Residents() {
             </div>
           </div>
 
+          {/* Medical Record Number */}
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="assignment_ind" size={16} className="text-slate-400" />
+              Medical Record Number
+            </label>
+            <input
+              type="text"
+              value={newResident.medical_record_number}
+              onChange={(e) => setNewResident({ ...newResident, medical_record_number: e.target.value })}
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400 font-mono"
+              placeholder="Enter MRN (optional)"
+            />
+          </div>
+
           {/* Date of Birth and Gender */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -889,6 +920,21 @@ export function Residents() {
                 placeholder="Enter last name"
               />
             </div>
+          </div>
+
+          {/* Medical Record Number */}
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="assignment_ind" size={16} className="text-slate-400" />
+              Medical Record Number
+            </label>
+            <input
+              type="text"
+              value={editForm.medical_record_number}
+              onChange={(e) => setEditForm({ ...editForm, medical_record_number: e.target.value })}
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all placeholder:text-slate-400 font-mono"
+              placeholder="Enter MRN (optional)"
+            />
           </div>
 
           {/* Date of Birth and Gender */}

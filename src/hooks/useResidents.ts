@@ -10,6 +10,7 @@ let residentsChannelCounter = 0;
 export interface CreateResidentInput {
   first_name: string;
   last_name: string;
+  medical_record_number?: string;
   gender: Gender;
   date_of_birth?: string;
   admission_date: string;
@@ -25,6 +26,7 @@ export interface UpdateResidentInput {
   id: string;
   first_name?: string;
   last_name?: string;
+  medical_record_number?: string;
   gender?: Gender;
   date_of_birth?: string;
   admission_date?: string;

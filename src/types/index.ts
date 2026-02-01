@@ -50,6 +50,7 @@ export type Gender = 'male' | 'female' | 'other';
 export interface Resident {
   id: string;
   bed_id?: string;
+  medical_record_number?: string;
   first_name: string;
   last_name: string;
   gender: Gender;
