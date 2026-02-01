@@ -102,6 +102,7 @@ export function Reports() {
     { key: 'isolation', label: 'Isolation', header: 'Isolation', enabled: false },
     { key: 'payor', label: 'Payor Type', header: 'Payor', enabled: false },
     { key: 'admissionDate', label: 'Admission Date', header: 'Admitted', enabled: false },
+    { key: 'dischargeDate', label: 'Discharge Date', header: 'Discharged', enabled: false },
   ]);
 
   const { beds, loading } = useBeds({
@@ -234,6 +235,9 @@ export function Reports() {
           : '-',
         admissionDate: bed.resident?.admission_date
           ? formatDate(bed.resident.admission_date)
+          : '-',
+        dischargeDate: bed.resident?.discharge_date
+          ? formatDate(bed.resident.discharge_date)
           : '-',
       }));
   }, [beds, dateFrom, dateTo, selectedStatuses, isolationFilter, selectedDiagnoses, selectedGenders]);

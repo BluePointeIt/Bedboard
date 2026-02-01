@@ -55,6 +55,7 @@ export interface Resident {
   gender: Gender;
   date_of_birth?: string;
   admission_date: string;
+  discharge_date?: string;
   payor: PayorType;
   diagnosis?: string;
   is_isolation: boolean;
