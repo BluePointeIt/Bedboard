@@ -352,7 +352,7 @@ export function Dashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Male Available */}
-          <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl p-5 border border-primary-200">
+          <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl border border-primary-200" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
                 <Icon name="male" size={24} className="text-white" />
@@ -365,7 +365,7 @@ export function Dashboard() {
           </div>
 
           {/* Female Available */}
-          <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-xl p-5 border border-pink-200">
+          <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-xl border border-pink-200" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center">
                 <Icon name="female" size={24} className="text-white" />
@@ -378,7 +378,7 @@ export function Dashboard() {
           </div>
 
           {/* Either Gender */}
-          <div className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 rounded-xl p-5 border border-violet-200">
+          <div className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 rounded-xl border border-violet-200" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center">
                 <Icon name="group" size={24} className="text-white" />
@@ -413,7 +413,7 @@ export function Dashboard() {
               const wingRate = wingTotal > 0 ? Math.round((wingOccupied / wingTotal) * 100) : 0;
 
               return (
-                <div key={wing.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <div key={wing.id} className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-medium text-slate-900">{wing.name}</h3>
                     <span className={`text-sm font-bold ${
@@ -462,7 +462,7 @@ export function Dashboard() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {/* Occupancy Rate */}
-              <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-xl p-4 border border-amber-200">
+              <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-xl border border-amber-200" style={{ padding: '24px' }}>
                 <p className="text-xs font-medium text-amber-700 mb-1">Occupancy Rate</p>
                 <p className="text-2xl font-bold text-amber-600">{wingRate}%</p>
                 <div className="h-1.5 bg-amber-200 rounded-full overflow-hidden mt-2">
@@ -474,21 +474,21 @@ export function Dashboard() {
               </div>
 
               {/* Occupied */}
-              <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl p-4 border border-primary-200">
+              <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl border border-primary-200" style={{ padding: '24px' }}>
                 <p className="text-xs font-medium text-primary-700 mb-1">Occupied</p>
                 <p className="text-2xl font-bold text-primary-600">{wingOccupied}</p>
                 <p className="text-xs text-primary-500 mt-1">of {wingTotal} beds</p>
               </div>
 
               {/* Vacant */}
-              <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-xl p-4 border border-green-200">
+              <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-xl border border-green-200" style={{ padding: '24px' }}>
                 <p className="text-xs font-medium text-green-700 mb-1">Available</p>
                 <p className="text-2xl font-bold text-green-600">{wingVacant}</p>
                 <p className="text-xs text-green-500 mt-1">ready for admission</p>
               </div>
 
               {/* Out of Service */}
-              <div className="bg-gradient-to-br from-slate-500/10 to-slate-500/5 rounded-xl p-4 border border-slate-200">
+              <div className="bg-gradient-to-br from-slate-500/10 to-slate-500/5 rounded-xl border border-slate-200" style={{ padding: '24px' }}>
                 <p className="text-xs font-medium text-slate-700 mb-1">Out of Service</p>
                 <p className="text-2xl font-bold text-slate-600">{wingOutOfService}</p>
                 <p className="text-xs text-slate-500 mt-1">maintenance</p>
@@ -560,7 +560,7 @@ export function Dashboard() {
             </div>
 
             {selectedBed.resident && (
-              <div className="p-4 bg-slate-50 rounded-lg">
+              <div className="bg-slate-50 rounded-lg" style={{ padding: '24px' }}>
                 <p className="text-sm text-slate-500 mb-2">Current Resident</p>
                 <p className="font-semibold text-slate-900">
                   {selectedBed.resident.first_name} {selectedBed.resident.last_name}
@@ -625,7 +625,7 @@ export function Dashboard() {
         <div className="space-y-4">
           {/* Gender requirement info */}
           {requiredGenderForBed && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 flex items-start gap-2">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 flex items-start gap-2" style={{ padding: '16px' }}>
               <Icon name="info" size={18} className="mt-0.5 flex-shrink-0" />
               <div>
                 <strong>Gender Restriction:</strong> This bed requires a{' '}
@@ -637,7 +637,7 @@ export function Dashboard() {
 
           {/* Gender incompatibility warning */}
           {genderCompatibility && !genderCompatibility.compatible && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+            <div className="bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2" style={{ padding: '16px' }}>
               <Icon name="warning" size={18} className="mt-0.5 flex-shrink-0" />
               <div>{genderCompatibility.reason}</div>
             </div>

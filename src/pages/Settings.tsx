@@ -739,7 +739,7 @@ export function Settings() {
         </div>
 
         {/* Calculated Occupancy Target */}
-        <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="mt-6 bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-sm font-medium text-slate-900">Calculated Occupancy Target</p>
@@ -996,19 +996,19 @@ export function Settings() {
         {/* Summary Cards */}
         {wings.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
               <p className="text-2xl font-bold text-slate-900">{wings.length}</p>
               <p className="text-xs text-slate-500 uppercase font-medium">Total Wings</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
               <p className="text-2xl font-bold text-primary-500">{rooms.length}</p>
               <p className="text-xs text-slate-500 uppercase font-medium">Total Rooms</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
               <p className="text-2xl font-bold text-primary-500">{totalBeds}</p>
               <p className="text-xs text-slate-500 uppercase font-medium">Total Beds</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+            <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
               <p className="text-2xl font-bold text-slate-900">
                 {wings.reduce((sum, w) => sum + w.occupied_beds, 0)}
               </p>

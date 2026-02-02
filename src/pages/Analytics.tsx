@@ -258,19 +258,19 @@ export function Analytics() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
             <p className="text-sm text-slate-500 mb-1">Total Beds</p>
             <p className="text-3xl font-bold text-slate-900">{analytics.totalBeds}</p>
           </div>
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
             <p className="text-sm text-slate-500 mb-1">Occupied</p>
             <p className="text-3xl font-bold text-primary-500">{analytics.occupiedBeds}</p>
           </div>
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
             <p className="text-sm text-slate-500 mb-1">Vacant</p>
             <p className="text-3xl font-bold text-green-600">{analytics.vacantBeds}</p>
           </div>
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
             <p className="text-sm text-slate-500 mb-1">Out of Service</p>
             <p className="text-3xl font-bold text-slate-500">{analytics.outOfServiceBeds}</p>
           </div>
@@ -334,7 +334,7 @@ export function Analytics() {
         </div>
 
         {/* Variance Summary */}
-        <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="mt-6 bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Icon
@@ -516,7 +516,7 @@ export function Analytics() {
         </div>
 
         {/* Explanation */}
-        <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="mt-6 bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
           <div className="flex items-start gap-3">
             <Icon name="info" size={20} className="text-slate-500 mt-0.5" />
             <div className="text-sm text-slate-500">
@@ -552,7 +552,7 @@ export function Analytics() {
             const wingRate = wingTotal > 0 ? Math.round((wingOccupied / wingTotal) * 100) : 0;
 
             return (
-              <div key={wing.id} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div key={wing.id} className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-medium text-slate-900">{wing.name}</h3>
                   <span className={`text-sm font-bold ${

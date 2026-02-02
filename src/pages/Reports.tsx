@@ -483,7 +483,7 @@ export function Reports() {
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
                   <Icon name="bed" size={20} className="text-slate-600" />
@@ -495,7 +495,7 @@ export function Reports() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
                   <Icon name="person" size={20} className="text-primary-600" />
@@ -512,7 +512,7 @@ export function Reports() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
                   <Icon name="check_circle" size={20} className="text-green-600" />
@@ -532,7 +532,7 @@ export function Reports() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
                   <Icon name="construction" size={20} className="text-slate-500" />
@@ -549,7 +549,7 @@ export function Reports() {
           <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <h3 className="font-semibold text-slate-900 mb-4">Gender Distribution</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-primary-50 rounded-lg border border-primary-200">
+              <div className="flex items-center gap-3 bg-primary-50 rounded-lg border border-primary-200" style={{ padding: '24px' }}>
                 <div className="w-10 h-10 rounded-full bg-primary-500 flex items-center justify-center">
                   <Icon name="male" size={24} className="text-white" />
                 </div>
@@ -559,7 +559,7 @@ export function Reports() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-pink-50 rounded-lg border border-pink-200">
+              <div className="flex items-center gap-3 bg-pink-50 rounded-lg border border-pink-200" style={{ padding: '24px' }}>
                 <div className="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center">
                   <Icon name="female" size={24} className="text-white" />
                 </div>
