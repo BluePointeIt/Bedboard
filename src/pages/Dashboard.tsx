@@ -296,7 +296,7 @@ export function Dashboard() {
   const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Total Occupancy Rate */}
       <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center justify-between mb-4">
@@ -350,7 +350,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Male Available */}
           <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl border border-primary-200" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3">
@@ -405,7 +405,7 @@ export function Dashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {wings.map(wing => {
               const wingBeds = beds.filter(b => b.room?.wing?.id === wing.id);
               const wingOccupied = wingBeds.filter(b => b.status === 'occupied').length;
@@ -460,7 +460,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {/* Occupancy Rate */}
               <div className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-xl border border-amber-200" style={{ padding: '24px' }}>
                 <p className="text-xs font-medium text-amber-700 mb-1">Occupancy Rate</p>

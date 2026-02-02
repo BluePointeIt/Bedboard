@@ -301,7 +301,7 @@ export function Residents() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -362,7 +362,7 @@ export function Residents() {
           No residents found
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filteredResidents.map((resident) => (
             <ResidentCard
               key={resident.id}

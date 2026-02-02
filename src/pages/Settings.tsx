@@ -587,7 +587,7 @@ export function Settings() {
   const loading = wingsLoading || roomsLoading;
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-8 max-w-5xl">
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-xl bg-primary-500/10 flex items-center justify-center">
           <Icon name="settings" size={24} className="text-primary-500" />
@@ -668,7 +668,7 @@ export function Settings() {
             <Icon name="pie_chart" size={16} className="text-slate-400" />
             Case-Mix <span className="font-normal text-slate-500">(Budgeted Residents)</span>
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Private</label>
               <input
@@ -995,7 +995,7 @@ export function Settings() {
 
         {/* Summary Cards */}
         {wings.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8">
             <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
               <p className="text-2xl font-bold text-slate-900">{wings.length}</p>
               <p className="text-xs text-slate-500 uppercase font-medium">Total Wings</p>
