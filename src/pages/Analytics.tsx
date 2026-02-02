@@ -257,7 +257,7 @@ export function Analytics() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ marginBottom: '32px' }}>
           <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
             <p className="text-sm text-slate-500 mb-1">Total Beds</p>
             <p className="text-3xl font-bold text-slate-900">{analytics.totalBeds}</p>
@@ -277,7 +277,7 @@ export function Analytics() {
         </div>
 
         {/* Target vs Actual Occupancy */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8" style={{ marginBottom: '32px' }}>
           <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl border border-primary-200" style={{ padding: '24px' }}>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -334,7 +334,7 @@ export function Analytics() {
         </div>
 
         {/* Variance Summary */}
-        <div className="mt-8 bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
+        <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Icon
@@ -465,7 +465,7 @@ export function Analytics() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8" style={{ marginBottom: '32px' }}>
           {/* Male Available */}
           <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl border border-primary-200" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3 mb-4">
@@ -516,7 +516,7 @@ export function Analytics() {
         </div>
 
         {/* Explanation */}
-        <div className="mt-8 bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
+        <div className="bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
           <div className="flex items-start gap-3">
             <Icon name="info" size={20} className="text-slate-500 mt-0.5" />
             <div className="text-sm text-slate-500">
