@@ -112,12 +112,20 @@ export function Settings() {
   const [importing, setImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
-  // Load facility name from localStorage
+  // Load facility name from Supabase
   useEffect(() => {
-    const savedFacilityName = localStorage.getItem('facilityName');
-    if (savedFacilityName) {
-      setFacilityName(savedFacilityName);
+    async function loadFacilityName() {
+      const { data, error } = await supabase
+        .from('facility_settings')
+        .select('setting_value')
+        .eq('setting_key', 'facility_name')
+        .single();
+
+      if (!error && data?.setting_value) {
+        setFacilityName(data.setting_value as string);
+      }
     }
+    loadFacilityName();
   }, []);
 
   // Load case-mix settings from Supabase
@@ -155,10 +163,19 @@ export function Settings() {
   const caseMixTotal = Object.values(payorRates).reduce((sum, val) => sum + val, 0);
   const calculatedOccupancyTarget = totalBeds > 0 ? Math.round((caseMixTotal / totalBeds) * 100) : 0;
 
-  const handleSaveFacility = () => {
-    localStorage.setItem('facilityName', facilityName);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSaveFacility = async () => {
+    const { error } = await supabase
+      .from('facility_settings')
+      .upsert({
+        setting_key: 'facility_name',
+        setting_value: facilityName,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'setting_key' });
+
+    if (!error) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
   const handleSaveBudget = async () => {
@@ -171,9 +188,6 @@ export function Settings() {
       }, { onConflict: 'setting_key' });
 
     if (!error) {
-      // Also save to localStorage for quick access by other components
-      localStorage.setItem('occupancyTarget', String(calculatedOccupancyTarget));
-      localStorage.setItem('payorRates', JSON.stringify(payorRates));
       setBudgetSaved(true);
       setTimeout(() => setBudgetSaved(false), 2000);
     }

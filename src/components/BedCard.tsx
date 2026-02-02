@@ -1,3 +1,4 @@
+import React from 'react';
 import { Icon } from './Icon';
 import { cn } from '../lib/utils';
 import type { Bed, Resident, Room, Wing } from '../types';
@@ -93,7 +94,7 @@ function getRoomLabel(bed: BedWithDetails): string {
   return `${roomNumber}-${bed.bed_letter}`;
 }
 
-export function BedCard({ bed, onClick }: BedCardProps) {
+export const BedCard = React.memo(function BedCard({ bed, onClick }: BedCardProps) {
   const resident = bed.resident;
   const isIsolation = resident?.is_isolation;
   const isClickable = !!onClick;
@@ -251,4 +252,15 @@ export function BedCard({ bed, onClick }: BedCardProps) {
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison for React.memo
+  // Only re-render if bed data or onClick reference changes
+  return (
+    prevProps.bed.id === nextProps.bed.id &&
+    prevProps.bed.updated_at === nextProps.bed.updated_at &&
+    prevProps.bed.status === nextProps.bed.status &&
+    prevProps.bed.resident?.id === nextProps.bed.resident?.id &&
+    prevProps.bed.resident?.updated_at === nextProps.bed.resident?.updated_at &&
+    prevProps.onClick === nextProps.onClick
+  );
+});

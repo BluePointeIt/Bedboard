@@ -11,6 +11,61 @@ import {
 
 const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+/**
+ * Type definitions for Supabase nested relation responses.
+ * Supabase returns nested relations as objects, but TypeScript can't infer the structure.
+ */
+interface SupabaseRoomData {
+  id: string;
+  room_number: string;
+  has_shared_bathroom: boolean;
+  shared_bathroom_group_id: string | null;
+  wing?: SupabaseWingData;
+}
+
+interface SupabaseWingData {
+  id: string;
+  name: string;
+}
+
+/**
+ * Type-safe accessor for wing data from Supabase queries.
+ */
+function extractWingData(wingData: unknown): SupabaseWingData | undefined {
+  if (!wingData || typeof wingData !== 'object') {
+    return undefined;
+  }
+  const wing = wingData as Record<string, unknown>;
+  if (typeof wing.id !== 'string' || typeof wing.name !== 'string') {
+    return undefined;
+  }
+  return {
+    id: wing.id,
+    name: wing.name,
+  };
+}
+
+/**
+ * Type-safe accessor for bed.room data from Supabase queries.
+ * Validates and extracts room data from the nested relation.
+ */
+function extractRoomData(bedRoom: unknown): SupabaseRoomData | null {
+  if (!bedRoom || typeof bedRoom !== 'object') {
+    return null;
+  }
+  const room = bedRoom as Record<string, unknown>;
+  if (typeof room.id !== 'string' || typeof room.room_number !== 'string') {
+    return null;
+  }
+  return {
+    id: room.id,
+    room_number: room.room_number,
+    has_shared_bathroom: Boolean(room.has_shared_bathroom),
+    shared_bathroom_group_id: typeof room.shared_bathroom_group_id === 'string' ? room.shared_bathroom_group_id : null,
+    wing: room.wing && typeof room.wing === 'object' ? extractWingData(room.wing) : undefined,
+  };
+}
+
 export interface GenderCompatibilityResult {
   compatible: boolean;
   reason?: string;
@@ -302,13 +357,15 @@ export function useBedActions() {
       return { compatible: true };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const roomData = bed.room as any;
+    const roomData = extractRoomData(bed.room);
+    if (!roomData) {
+      return { compatible: true };
+    }
     const room = {
-      id: roomData.id as string,
-      room_number: roomData.room_number as string,
-      has_shared_bathroom: roomData.has_shared_bathroom as boolean,
-      shared_bathroom_group_id: roomData.shared_bathroom_group_id as string | null,
+      id: roomData.id,
+      room_number: roomData.room_number,
+      has_shared_bathroom: roomData.has_shared_bathroom,
+      shared_bathroom_group_id: roomData.shared_bathroom_group_id,
     };
 
     // Get all beds in the same room
@@ -471,12 +528,12 @@ export function useBedActions() {
 
     if (!bed) return null;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const roomData = bed.room as any;
+    const roomData = extractRoomData(bed.room);
+    if (!roomData) return null;
     const room = {
-      id: roomData.id as string,
-      has_shared_bathroom: roomData.has_shared_bathroom as boolean,
-      shared_bathroom_group_id: roomData.shared_bathroom_group_id as string | null,
+      id: roomData.id,
+      has_shared_bathroom: roomData.has_shared_bathroom,
+      shared_bathroom_group_id: roomData.shared_bathroom_group_id,
     };
 
     // Get all beds in the same room
@@ -637,9 +694,9 @@ export function useBedActions() {
     const scores: BedCompatibilityScore[] = [];
 
     for (const bed of vacantBeds) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const roomData = bed.room as any;
-      const roomId = roomData.id as string;
+      const roomData = extractRoomData(bed.room);
+      if (!roomData) continue;
+      const roomId = roomData.id;
 
       // Get room info
       const bedsInRoom = roomToBeds.get(roomId) || [];
@@ -788,8 +845,8 @@ export function useBedActions() {
     }>();
 
     for (const bed of allBeds) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const roomData = bed.room as any;
+      const roomData = extractRoomData(bed.room);
+      if (!roomData) continue;
       const roomId = bed.room_id;
 
       if (!roomsMap.has(roomId)) {
@@ -937,9 +994,9 @@ export function useBedActions() {
     const scores: BedCompatibilityScore[] = [];
 
     for (const bed of vacantBeds) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const roomData = bed.room as any;
-      const roomId = roomData.id as string;
+      const roomData = extractRoomData(bed.room);
+      if (!roomData) continue;
+      const roomId = roomData.id;
 
       // Get room info
       const bedsInRoom = roomToBeds.get(roomId) || [];

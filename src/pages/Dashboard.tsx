@@ -3,7 +3,7 @@ import { BedCard, BedGrid, FilterLegend, Modal, Button, Icon } from '../componen
 import { useBeds, useBedActions } from '../hooks/useBeds';
 import type { GenderCompatibilityResult } from '../hooks/useBeds';
 import { useUnassignedResidents } from '../hooks/useResidents';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { BedWithDetails } from '../components/BedCard';
 import type { LayoutContext } from '../components/AppLayout';
 import type { Gender } from '../types';
@@ -14,30 +14,66 @@ import {
   type MoveRecommendation,
 } from '../lib/compatibilityUtils';
 
+// Consolidated state interfaces
+interface ModalState {
+  type: 'detail' | 'assign' | 'move' | null;
+  selectedBed: BedWithDetails | null;
+  selectedResidentId: string;
+  selectedTargetBedId: string;
+}
+
+interface AssignModalState {
+  genderCompatibility: GenderCompatibilityResult | null;
+  requiredGenderForBed: Gender | null;
+  bedRecommendations: BedCompatibilityScore[];
+  recommendationsLoading: boolean;
+  moveOptimizations: MoveRecommendation[];
+  showOptimizations: boolean;
+}
+
+interface MoveModalState {
+  targetCompatibility: GenderCompatibilityResult | null;
+  bedRecommendations: BedCompatibilityScore[];
+  recommendationsLoading: boolean;
+}
+
+const INITIAL_MODAL_STATE: ModalState = {
+  type: null,
+  selectedBed: null,
+  selectedResidentId: '',
+  selectedTargetBedId: '',
+};
+
+const INITIAL_ASSIGN_STATE: AssignModalState = {
+  genderCompatibility: null,
+  requiredGenderForBed: null,
+  bedRecommendations: [],
+  recommendationsLoading: false,
+  moveOptimizations: [],
+  showOptimizations: false,
+};
+
+const INITIAL_MOVE_STATE: MoveModalState = {
+  targetCompatibility: null,
+  bedRecommendations: [],
+  recommendationsLoading: false,
+};
+
 export function Dashboard() {
   const { searchQuery, selectedWingId, wings } = useOutletContext<LayoutContext>();
 
-  const [selectedBed, setSelectedBed] = useState<BedWithDetails | null>(null);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  const [showMoveModal, setShowMoveModal] = useState(false);
-  const [selectedResidentId, setSelectedResidentId] = useState('');
-  const [selectedTargetBedId, setSelectedTargetBedId] = useState('');
+  // Consolidated modal state
+  const [modalState, setModalState] = useState<ModalState>(INITIAL_MODAL_STATE);
+  const [assignState, setAssignState] = useState<AssignModalState>(INITIAL_ASSIGN_STATE);
+  const [moveState, setMoveState] = useState<MoveModalState>(INITIAL_MOVE_STATE);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Gender compatibility state
-  const [genderCompatibility, setGenderCompatibility] = useState<GenderCompatibilityResult | null>(null);
-  const [requiredGenderForBed, setRequiredGenderForBed] = useState<Gender | null>(null);
-  const [moveTargetCompatibility, setMoveTargetCompatibility] = useState<GenderCompatibilityResult | null>(null);
-
-  // Bed recommendations state
-  const [bedRecommendations, setBedRecommendations] = useState<BedCompatibilityScore[]>([]);
-  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
-  const [moveOptimizations, setMoveOptimizations] = useState<MoveRecommendation[]>([]);
-  const [showOptimizations, setShowOptimizations] = useState(false);
-
-  // Move modal recommendations state
-  const [moveBedRecommendations, setMoveBedRecommendations] = useState<BedCompatibilityScore[]>([]);
-  const [moveRecommendationsLoading, setMoveRecommendationsLoading] = useState(false);
+  // Derived state helpers
+  const selectedBed = modalState.selectedBed;
+  const showAssignModal = modalState.type === 'assign';
+  const showMoveModal = modalState.type === 'move';
+  const selectedResidentId = modalState.selectedResidentId;
+  const selectedTargetBedId = modalState.selectedTargetBedId;
 
   const { beds, loading, refetch: refetchBeds } = useBeds({
     wing_id: selectedWingId,
@@ -53,67 +89,96 @@ export function Dashboard() {
   // Check required gender when opening assign modal
   useEffect(() => {
     if (showAssignModal && selectedBed) {
-      getRequiredGenderForBed(selectedBed.id).then(setRequiredGenderForBed);
+      getRequiredGenderForBed(selectedBed.id).then(gender =>
+        setAssignState(prev => ({ ...prev, requiredGenderForBed: gender }))
+      );
     } else {
-      setRequiredGenderForBed(null);
-      setGenderCompatibility(null);
+      setAssignState(prev => ({ ...prev, requiredGenderForBed: null, genderCompatibility: null }));
     }
-  }, [showAssignModal, selectedBed]);
+  }, [showAssignModal, selectedBed, getRequiredGenderForBed]);
 
   // Check gender compatibility when a resident is selected for assignment
   useEffect(() => {
     if (selectedResidentId && selectedBed) {
       const resident = unassignedResidents.find((r) => r.id === selectedResidentId);
       if (resident) {
-        checkGenderCompatibility(selectedBed.id, resident.gender, resident.is_isolation).then(setGenderCompatibility);
+        checkGenderCompatibility(selectedBed.id, resident.gender, resident.is_isolation).then(result =>
+          setAssignState(prev => ({ ...prev, genderCompatibility: result }))
+        );
       }
     } else {
-      setGenderCompatibility(null);
+      setAssignState(prev => ({ ...prev, genderCompatibility: null }));
     }
-  }, [selectedResidentId, selectedBed, unassignedResidents]);
+  }, [selectedResidentId, selectedBed, unassignedResidents, checkGenderCompatibility]);
 
   // Fetch bed recommendations when a resident is selected
   useEffect(() => {
     if (selectedResidentId && showAssignModal) {
-      setRecommendationsLoading(true);
+      setAssignState(prev => ({ ...prev, recommendationsLoading: true }));
       getBedRecommendations(selectedResidentId)
-        .then(setBedRecommendations)
-        .finally(() => setRecommendationsLoading(false));
+        .then(recs => setAssignState(prev => ({ ...prev, bedRecommendations: recs })))
+        .finally(() => setAssignState(prev => ({ ...prev, recommendationsLoading: false })));
     } else {
-      setBedRecommendations([]);
+      setAssignState(prev => ({ ...prev, bedRecommendations: [] }));
     }
-  }, [selectedResidentId, showAssignModal]);
+  }, [selectedResidentId, showAssignModal, getBedRecommendations]);
 
   // Fetch move optimizations when assign modal opens
   useEffect(() => {
     if (showAssignModal && unassignedResidents.length > 0) {
-      getMoveOptimizations(unassignedResidents).then(setMoveOptimizations);
+      getMoveOptimizations(unassignedResidents).then(opts =>
+        setAssignState(prev => ({ ...prev, moveOptimizations: opts }))
+      );
     } else {
-      setMoveOptimizations([]);
-      setShowOptimizations(false);
+      setAssignState(prev => ({ ...prev, moveOptimizations: [], showOptimizations: false }));
     }
-  }, [showAssignModal, unassignedResidents]);
+  }, [showAssignModal, unassignedResidents, getMoveOptimizations]);
 
   // Check gender compatibility when a target bed is selected for move
   useEffect(() => {
     if (selectedTargetBedId && selectedBed?.resident) {
-      checkGenderCompatibility(selectedTargetBedId, selectedBed.resident.gender, selectedBed.resident.is_isolation).then(setMoveTargetCompatibility);
+      checkGenderCompatibility(selectedTargetBedId, selectedBed.resident.gender, selectedBed.resident.is_isolation).then(result =>
+        setMoveState(prev => ({ ...prev, targetCompatibility: result }))
+      );
     } else {
-      setMoveTargetCompatibility(null);
+      setMoveState(prev => ({ ...prev, targetCompatibility: null }));
     }
-  }, [selectedTargetBedId, selectedBed]);
+  }, [selectedTargetBedId, selectedBed, checkGenderCompatibility]);
 
   // Fetch bed recommendations when move modal opens
   useEffect(() => {
     if (showMoveModal && selectedBed?.resident) {
-      setMoveRecommendationsLoading(true);
+      setMoveState(prev => ({ ...prev, recommendationsLoading: true }));
       getBedRecommendations(selectedBed.resident.id)
-        .then(setMoveBedRecommendations)
-        .finally(() => setMoveRecommendationsLoading(false));
+        .then(recs => setMoveState(prev => ({ ...prev, bedRecommendations: recs })))
+        .finally(() => setMoveState(prev => ({ ...prev, recommendationsLoading: false })));
     } else {
-      setMoveBedRecommendations([]);
+      setMoveState(prev => ({ ...prev, bedRecommendations: [] }));
     }
-  }, [showMoveModal, selectedBed?.resident?.id]);
+  }, [showMoveModal, selectedBed?.resident?.id, getBedRecommendations]);
+
+  // Modal state helpers
+  const openAssignModal = useCallback(() => {
+    setModalState(prev => ({ ...prev, type: 'assign' }));
+  }, []);
+
+  const openMoveModal = useCallback(() => {
+    setModalState(prev => ({ ...prev, type: 'move' }));
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setModalState(INITIAL_MODAL_STATE);
+    setAssignState(INITIAL_ASSIGN_STATE);
+    setMoveState(INITIAL_MOVE_STATE);
+  }, []);
+
+  const selectBed = useCallback((bed: BedWithDetails) => {
+    setModalState(prev => ({ ...prev, selectedBed: bed, type: 'detail' }));
+  }, []);
+
+  const setTargetBedId = useCallback((bedId: string) => {
+    setModalState(prev => ({ ...prev, selectedTargetBedId: bedId }));
+  }, []);
 
   const handleAssignResident = async () => {
     if (!selectedBed || !selectedResidentId) return;
@@ -123,7 +188,7 @@ export function Dashboard() {
     if (resident) {
       const compatibility = await checkGenderCompatibility(selectedBed.id, resident.gender, resident.is_isolation);
       if (!compatibility.compatible) {
-        setGenderCompatibility(compatibility);
+        setAssignState(prev => ({ ...prev, genderCompatibility: compatibility }));
         return;
       }
     }
@@ -132,10 +197,7 @@ export function Dashboard() {
     await assignResident(selectedBed.id, selectedResidentId);
     await refetchBeds();
     setActionLoading(false);
-    setShowAssignModal(false);
-    setSelectedBed(null);
-    setSelectedResidentId('');
-    setGenderCompatibility(null);
+    closeModal();
   };
 
   const handleUnassignResident = async () => {
@@ -144,7 +206,7 @@ export function Dashboard() {
     await unassignResident(selectedBed.resident.id, selectedBed.id);
     await refetchBeds();
     setActionLoading(false);
-    setSelectedBed(null);
+    closeModal();
   };
 
   const handleSetOutOfService = async () => {
@@ -153,7 +215,7 @@ export function Dashboard() {
     await updateBedStatus(selectedBed.id, 'out_of_service', 'Manual out of service');
     await refetchBeds();
     setActionLoading(false);
-    setSelectedBed(null);
+    closeModal();
   };
 
   const handleReturnToService = async () => {
@@ -162,7 +224,7 @@ export function Dashboard() {
     await updateBedStatus(selectedBed.id, 'vacant');
     await refetchBeds();
     setActionLoading(false);
-    setSelectedBed(null);
+    closeModal();
   };
 
   const handleMoveResident = async () => {
@@ -171,7 +233,7 @@ export function Dashboard() {
     // Final compatibility check before moving
     const compatibility = await checkGenderCompatibility(selectedTargetBedId, selectedBed.resident.gender, selectedBed.resident.is_isolation);
     if (!compatibility.compatible) {
-      setMoveTargetCompatibility(compatibility);
+      setMoveState(prev => ({ ...prev, targetCompatibility: compatibility }));
       return;
     }
 
@@ -185,10 +247,7 @@ export function Dashboard() {
 
     await refetchBeds();
     setActionLoading(false);
-    setShowMoveModal(false);
-    setSelectedBed(null);
-    setSelectedTargetBedId('');
-    setMoveTargetCompatibility(null);
+    closeModal();
   };
 
   // Get vacant beds for move functionality
@@ -527,15 +586,15 @@ export function Dashboard() {
       ) : (
         <BedGrid>
           {beds.map((bed) => (
-            <BedCard key={bed.id} bed={bed} onClick={() => setSelectedBed(bed)} />
+            <BedCard key={bed.id} bed={bed} onClick={() => selectBed(bed)} />
           ))}
         </BedGrid>
       )}
 
       {/* Bed Detail Modal */}
       <Modal
-        isOpen={!!selectedBed && !showAssignModal && !showMoveModal}
-        onClose={() => setSelectedBed(null)}
+        isOpen={modalState.type === 'detail'}
+        onClose={closeModal}
         title={`Room ${selectedBed?.room?.room_number || ''} - Bed ${selectedBed?.bed_letter || ''}`}
         size="md"
       >
@@ -578,12 +637,12 @@ export function Dashboard() {
 
             <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-200">
               {selectedBed.status === 'vacant' && (
-                <Button onClick={() => setShowAssignModal(true)}>Assign Resident</Button>
+                <Button onClick={openAssignModal}>Assign Resident</Button>
               )}
 
               {selectedBed.status === 'occupied' && selectedBed.resident && (
                 <>
-                  <Button onClick={() => setShowMoveModal(true)}>
+                  <Button onClick={openMoveModal}>
                     Move Resident
                   </Button>
                   <Button variant="danger" onClick={handleUnassignResident} loading={actionLoading}>
@@ -611,35 +670,28 @@ export function Dashboard() {
       {/* Assign Resident Modal */}
       <Modal
         isOpen={showAssignModal}
-        onClose={() => {
-          setShowAssignModal(false);
-          setSelectedResidentId('');
-          setGenderCompatibility(null);
-          setBedRecommendations([]);
-          setMoveOptimizations([]);
-          setShowOptimizations(false);
-        }}
+        onClose={closeModal}
         title="Assign Resident"
         size="lg"
       >
         <div className="space-y-4">
           {/* Gender requirement info */}
-          {requiredGenderForBed && (
+          {assignState.requiredGenderForBed && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 flex items-start gap-2" style={{ padding: '16px' }}>
               <Icon name="info" size={18} className="mt-0.5 flex-shrink-0" />
               <div>
                 <strong>Gender Restriction:</strong> This bed requires a{' '}
-                <strong>{requiredGenderForBed}</strong> resident due to existing occupancy in the room
+                <strong>{assignState.requiredGenderForBed}</strong> resident due to existing occupancy in the room
                 or shared bathroom.
               </div>
             </div>
           )}
 
           {/* Gender incompatibility warning */}
-          {genderCompatibility && !genderCompatibility.compatible && (
+          {assignState.genderCompatibility && !assignState.genderCompatibility.compatible && (
             <div className="bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2" style={{ padding: '16px' }}>
               <Icon name="warning" size={18} className="mt-0.5 flex-shrink-0" />
-              <div>{genderCompatibility.reason}</div>
+              <div>{assignState.genderCompatibility.reason}</div>
             </div>
           )}
 
@@ -650,12 +702,12 @@ export function Dashboard() {
             </label>
             <select
               value={selectedResidentId}
-              onChange={(e) => setSelectedResidentId(e.target.value)}
+              onChange={(e) => setModalState(prev => ({ ...prev, selectedResidentId: e.target.value }))}
               className="w-full h-12 px-4 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
             >
               <option value="">Choose a resident...</option>
               {unassignedResidents.map((resident) => {
-                const isCompatible = !requiredGenderForBed || resident.gender === requiredGenderForBed;
+                const isCompatible = !assignState.requiredGenderForBed || resident.gender === assignState.requiredGenderForBed;
                 const age = calculateAge(resident.date_of_birth);
                 const ageStr = age !== null ? `, ${age}yo` : '';
                 const isolationStr = resident.is_isolation ? ' - ISOLATION' : '';
@@ -678,9 +730,9 @@ export function Dashboard() {
                 No unassigned residents available. Create a new admission first.
               </p>
             )}
-            {requiredGenderForBed && unassignedResidents.filter(r => r.gender === requiredGenderForBed).length === 0 && unassignedResidents.length > 0 && (
+            {assignState.requiredGenderForBed && unassignedResidents.filter(r => r.gender === assignState.requiredGenderForBed).length === 0 && unassignedResidents.length > 0 && (
               <p className="text-sm text-yellow-600 mt-2">
-                No {requiredGenderForBed} residents available. Only {requiredGenderForBed} residents can be assigned to this bed.
+                No {assignState.requiredGenderForBed} residents available. Only {assignState.requiredGenderForBed} residents can be assigned to this bed.
               </p>
             )}
           </div>
@@ -693,45 +745,45 @@ export function Dashboard() {
                 Recommended Beds
               </h4>
 
-              {recommendationsLoading ? (
+              {assignState.recommendationsLoading ? (
                 <div className="flex items-center justify-center py-4">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500" />
                   <span className="ml-2 text-sm text-slate-500">Analyzing compatibility...</span>
                 </div>
-              ) : bedRecommendations.length === 0 ? (
+              ) : assignState.bedRecommendations.length === 0 ? (
                 <p className="text-sm text-slate-500 py-2">No compatible beds available for this resident.</p>
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {/* Top Recommendation */}
-                  {bedRecommendations[0] && (
+                  {assignState.bedRecommendations[0] && (
                     <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
                           <Icon name="star" size={18} className="text-amber-500" />
                           <span className="font-semibold text-slate-900">
-                            Room {bedRecommendations[0].bedInfo.roomNumber}{bedRecommendations[0].bedInfo.bedLetter}
+                            Room {assignState.bedRecommendations[0].bedInfo.roomNumber}{assignState.bedRecommendations[0].bedInfo.bedLetter}
                           </span>
-                          <span className="text-xs text-slate-500">- {bedRecommendations[0].bedInfo.wingName}</span>
+                          <span className="text-xs text-slate-500">- {assignState.bedRecommendations[0].bedInfo.wingName}</span>
                         </div>
                         <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
-                          {bedRecommendations[0].totalScore}% match
+                          {assignState.bedRecommendations[0].totalScore}% match
                         </span>
                       </div>
-                      {bedRecommendations[0].roommate && (
+                      {assignState.bedRecommendations[0].roommate && (
                         <div className="mt-2 text-sm text-slate-600">
-                          <span className="font-medium">Roommate:</span> {bedRecommendations[0].roommate.name}
-                          {bedRecommendations[0].roommate.age !== null && ` (${bedRecommendations[0].roommate.age}yo)`}
-                          {bedRecommendations[0].roommate.diagnosis && `, ${bedRecommendations[0].roommate.diagnosis}`}
+                          <span className="font-medium">Roommate:</span> {assignState.bedRecommendations[0].roommate.name}
+                          {assignState.bedRecommendations[0].roommate.age !== null && ` (${assignState.bedRecommendations[0].roommate.age}yo)`}
+                          {assignState.bedRecommendations[0].roommate.diagnosis && `, ${assignState.bedRecommendations[0].roommate.diagnosis}`}
                         </div>
                       )}
-                      {!bedRecommendations[0].roommate && (
+                      {!assignState.bedRecommendations[0].roommate && (
                         <div className="mt-2 text-sm text-slate-600">
                           <span className="font-medium">Empty room</span> - No roommate constraints
                         </div>
                       )}
-                      {bedRecommendations[0].warnings.length > 0 && (
+                      {assignState.bedRecommendations[0].warnings.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
-                          {bedRecommendations[0].warnings.map((warning, i) => (
+                          {assignState.bedRecommendations[0].warnings.map((warning, i) => (
                             <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded">
                               <Icon name="warning" size={12} />
                               {warning}
@@ -740,15 +792,15 @@ export function Dashboard() {
                         </div>
                       )}
                       <div className="mt-2 flex gap-4 text-xs text-slate-500">
-                        <span>Age: {bedRecommendations[0].ageScore}%</span>
-                        <span>Diagnosis: {bedRecommendations[0].diagnosisScore}%</span>
-                        <span>Flexibility: {bedRecommendations[0].flexibilityScore}%</span>
+                        <span>Age: {assignState.bedRecommendations[0].ageScore}%</span>
+                        <span>Diagnosis: {assignState.bedRecommendations[0].diagnosisScore}%</span>
+                        <span>Flexibility: {assignState.bedRecommendations[0].flexibilityScore}%</span>
                       </div>
                     </div>
                   )}
 
                   {/* Other Recommendations */}
-                  {bedRecommendations.slice(1, 5).map((rec) => {
+                  {assignState.bedRecommendations.slice(1, 5).map((rec) => {
                     const { color, icon } = getCompatibilityLabel(rec.totalScore);
                     return (
                       <div
@@ -798,9 +850,9 @@ export function Dashboard() {
                     );
                   })}
 
-                  {bedRecommendations.length > 5 && (
+                  {assignState.bedRecommendations.length > 5 && (
                     <p className="text-xs text-slate-500 text-center pt-2">
-                      +{bedRecommendations.length - 5} more beds available
+                      +{assignState.bedRecommendations.length - 5} more beds available
                     </p>
                   )}
                 </div>
@@ -809,29 +861,29 @@ export function Dashboard() {
           )}
 
           {/* Move Optimization Suggestions */}
-          {moveOptimizations.length > 0 && (
+          {assignState.moveOptimizations.length > 0 && (
             <div className="border-t border-slate-200 pt-4">
               <button
-                onClick={() => setShowOptimizations(!showOptimizations)}
+                onClick={() => setAssignState(prev => ({ ...prev, showOptimizations: !prev.showOptimizations }))}
                 className="w-full flex items-center justify-between text-slate-700 text-sm font-semibold hover:text-slate-900 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <Icon name="lightbulb" size={16} className="text-violet-500" />
                   Optimization Suggestions
                   <span className="px-1.5 py-0.5 bg-violet-100 text-violet-700 text-xs rounded-full">
-                    {moveOptimizations.length}
+                    {assignState.moveOptimizations.length}
                   </span>
                 </div>
                 <Icon
-                  name={showOptimizations ? 'expand_less' : 'expand_more'}
+                  name={assignState.showOptimizations ? 'expand_less' : 'expand_more'}
                   size={20}
                   className="text-slate-400"
                 />
               </button>
 
-              {showOptimizations && (
+              {assignState.showOptimizations && (
                 <div className="mt-3 space-y-2">
-                  {moveOptimizations.slice(0, 3).map((opt) => (
+                  {assignState.moveOptimizations.slice(0, 3).map((opt) => (
                     <div
                       key={opt.residentId}
                       className="p-3 bg-violet-50 border border-violet-200 rounded-lg"
@@ -858,9 +910,13 @@ export function Dashboard() {
                             setActionLoading(false);
                             // Refresh recommendations
                             if (selectedResidentId) {
-                              getBedRecommendations(selectedResidentId).then(setBedRecommendations);
+                              getBedRecommendations(selectedResidentId).then(recs =>
+                                setAssignState(prev => ({ ...prev, bedRecommendations: recs }))
+                              );
                             }
-                            getMoveOptimizations(unassignedResidents).then(setMoveOptimizations);
+                            getMoveOptimizations(unassignedResidents).then(opts =>
+                              setAssignState(prev => ({ ...prev, moveOptimizations: opts }))
+                            );
                           }}
                           loading={actionLoading}
                         >
@@ -877,20 +933,13 @@ export function Dashboard() {
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
             <Button
               variant="secondary"
-              onClick={() => {
-                setShowAssignModal(false);
-                setSelectedResidentId('');
-                setGenderCompatibility(null);
-                setBedRecommendations([]);
-                setMoveOptimizations([]);
-                setShowOptimizations(false);
-              }}
+              onClick={closeModal}
             >
               Cancel
             </Button>
             <Button
               onClick={handleAssignResident}
-              disabled={!selectedResidentId || (genderCompatibility !== null && !genderCompatibility.compatible)}
+              disabled={!selectedResidentId || (assignState.genderCompatibility !== null && !assignState.genderCompatibility.compatible)}
               loading={actionLoading}
             >
               Assign
@@ -902,12 +951,7 @@ export function Dashboard() {
       {/* Move Resident Modal */}
       <Modal
         isOpen={showMoveModal}
-        onClose={() => {
-          setShowMoveModal(false);
-          setSelectedTargetBedId('');
-          setMoveTargetCompatibility(null);
-          setMoveBedRecommendations([]);
-        }}
+        onClose={closeModal}
         title="Move Resident"
         size="lg"
       >
@@ -930,10 +974,10 @@ export function Dashboard() {
           )}
 
           {/* Gender incompatibility warning */}
-          {moveTargetCompatibility && !moveTargetCompatibility.compatible && (
+          {moveState.targetCompatibility && !moveState.targetCompatibility.compatible && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
               <Icon name="warning" size={18} className="mt-0.5 flex-shrink-0" />
-              <div>{moveTargetCompatibility.reason}</div>
+              <div>{moveState.targetCompatibility.reason}</div>
             </div>
           )}
 
@@ -944,22 +988,22 @@ export function Dashboard() {
               Recommended Beds
             </h4>
 
-            {moveRecommendationsLoading ? (
+            {moveState.recommendationsLoading ? (
               <div className="flex items-center justify-center py-4">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500" />
                 <span className="ml-2 text-sm text-slate-500">Analyzing compatibility...</span>
               </div>
-            ) : moveBedRecommendations.length === 0 ? (
+            ) : moveState.bedRecommendations.length === 0 ? (
               <p className="text-sm text-slate-500 py-2">No compatible beds available.</p>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {/* Top Recommendation */}
-                {moveBedRecommendations[0] && (
+                {moveState.bedRecommendations[0] && (
                   <button
                     type="button"
-                    onClick={() => setSelectedTargetBedId(moveBedRecommendations[0].bedId)}
+                    onClick={() => setTargetBedId(moveState.bedRecommendations[0].bedId)}
                     className={`w-full text-left p-3 rounded-lg border transition-all ${
-                      selectedTargetBedId === moveBedRecommendations[0].bedId
+                      selectedTargetBedId === moveState.bedRecommendations[0].bedId
                         ? 'bg-amber-100 border-amber-400 ring-2 ring-amber-300'
                         : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 hover:border-amber-300'
                     }`}
@@ -968,29 +1012,29 @@ export function Dashboard() {
                       <div className="flex items-center gap-2">
                         <Icon name="star" size={18} className="text-amber-500" />
                         <span className="font-semibold text-slate-900">
-                          Room {moveBedRecommendations[0].bedInfo.roomNumber}{moveBedRecommendations[0].bedInfo.bedLetter}
+                          Room {moveState.bedRecommendations[0].bedInfo.roomNumber}{moveState.bedRecommendations[0].bedInfo.bedLetter}
                         </span>
-                        <span className="text-xs text-slate-500">- {moveBedRecommendations[0].bedInfo.wingName}</span>
+                        <span className="text-xs text-slate-500">- {moveState.bedRecommendations[0].bedInfo.wingName}</span>
                       </div>
                       <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
-                        {moveBedRecommendations[0].totalScore}% match
+                        {moveState.bedRecommendations[0].totalScore}% match
                       </span>
                     </div>
-                    {moveBedRecommendations[0].roommate && (
+                    {moveState.bedRecommendations[0].roommate && (
                       <div className="mt-2 text-sm text-slate-600">
-                        <span className="font-medium">Roommate:</span> {moveBedRecommendations[0].roommate.name}
-                        {moveBedRecommendations[0].roommate.age !== null && ` (${moveBedRecommendations[0].roommate.age}yo)`}
-                        {moveBedRecommendations[0].roommate.diagnosis && `, ${moveBedRecommendations[0].roommate.diagnosis}`}
+                        <span className="font-medium">Roommate:</span> {moveState.bedRecommendations[0].roommate.name}
+                        {moveState.bedRecommendations[0].roommate.age !== null && ` (${moveState.bedRecommendations[0].roommate.age}yo)`}
+                        {moveState.bedRecommendations[0].roommate.diagnosis && `, ${moveState.bedRecommendations[0].roommate.diagnosis}`}
                       </div>
                     )}
-                    {!moveBedRecommendations[0].roommate && (
+                    {!moveState.bedRecommendations[0].roommate && (
                       <div className="mt-2 text-sm text-slate-600">
                         <span className="font-medium">Empty room</span> - No roommate constraints
                       </div>
                     )}
-                    {moveBedRecommendations[0].warnings.length > 0 && (
+                    {moveState.bedRecommendations[0].warnings.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {moveBedRecommendations[0].warnings.map((warning, i) => (
+                        {moveState.bedRecommendations[0].warnings.map((warning, i) => (
                           <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded">
                             <Icon name="warning" size={12} />
                             {warning}
@@ -999,21 +1043,21 @@ export function Dashboard() {
                       </div>
                     )}
                     <div className="mt-2 flex gap-4 text-xs text-slate-500">
-                      <span>Age: {moveBedRecommendations[0].ageScore}%</span>
-                      <span>Diagnosis: {moveBedRecommendations[0].diagnosisScore}%</span>
-                      <span>Flexibility: {moveBedRecommendations[0].flexibilityScore}%</span>
+                      <span>Age: {moveState.bedRecommendations[0].ageScore}%</span>
+                      <span>Diagnosis: {moveState.bedRecommendations[0].diagnosisScore}%</span>
+                      <span>Flexibility: {moveState.bedRecommendations[0].flexibilityScore}%</span>
                     </div>
                   </button>
                 )}
 
                 {/* Other Recommendations */}
-                {moveBedRecommendations.slice(1, 5).map((rec) => {
+                {moveState.bedRecommendations.slice(1, 5).map((rec) => {
                   const { color, icon } = getCompatibilityLabel(rec.totalScore);
                   return (
                     <button
                       key={rec.bedId}
                       type="button"
-                      onClick={() => setSelectedTargetBedId(rec.bedId)}
+                      onClick={() => setTargetBedId(rec.bedId)}
                       className={`w-full text-left p-3 rounded-lg border transition-all ${
                         selectedTargetBedId === rec.bedId
                           ? 'ring-2 ring-primary-300 border-primary-400 bg-primary-50'
@@ -1061,9 +1105,9 @@ export function Dashboard() {
                   );
                 })}
 
-                {moveBedRecommendations.length > 5 && (
+                {moveState.bedRecommendations.length > 5 && (
                   <p className="text-xs text-slate-500 text-center pt-2">
-                    +{moveBedRecommendations.length - 5} more beds available
+                    +{moveState.bedRecommendations.length - 5} more beds available
                   </p>
                 )}
               </div>
@@ -1078,12 +1122,12 @@ export function Dashboard() {
             </label>
             <select
               value={selectedTargetBedId}
-              onChange={(e) => setSelectedTargetBedId(e.target.value)}
+              onChange={(e) => setTargetBedId(e.target.value)}
               className="w-full h-12 px-4 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
             >
               <option value="">Choose a vacant bed...</option>
               {vacantBeds.map((bed) => {
-                const rec = moveBedRecommendations.find(r => r.bedId === bed.id);
+                const rec = moveState.bedRecommendations.find(r => r.bedId === bed.id);
                 return (
                   <option key={bed.id} value={bed.id}>
                     {bed.room?.wing?.name} - Room {bed.room?.room_number} - Bed {bed.bed_letter}
@@ -1102,18 +1146,13 @@ export function Dashboard() {
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
             <Button
               variant="secondary"
-              onClick={() => {
-                setShowMoveModal(false);
-                setSelectedTargetBedId('');
-                setMoveTargetCompatibility(null);
-                setMoveBedRecommendations([]);
-              }}
+              onClick={closeModal}
             >
               Cancel
             </Button>
             <Button
               onClick={handleMoveResident}
-              disabled={!selectedTargetBedId || (moveTargetCompatibility !== null && !moveTargetCompatibility.compatible)}
+              disabled={!selectedTargetBedId || (moveState.targetCompatibility !== null && !moveState.targetCompatibility.compatible)}
               loading={actionLoading}
             >
               Move Resident
