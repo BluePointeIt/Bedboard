@@ -39,7 +39,7 @@ export function Dashboard() {
   const [moveBedRecommendations, setMoveBedRecommendations] = useState<BedCompatibilityScore[]>([]);
   const [moveRecommendationsLoading, setMoveRecommendationsLoading] = useState(false);
 
-  const { beds, loading } = useBeds({
+  const { beds, loading, refetch: refetchBeds } = useBeds({
     wing_id: selectedWingId,
     search: searchQuery || undefined,
   });
@@ -130,6 +130,7 @@ export function Dashboard() {
 
     setActionLoading(true);
     await assignResident(selectedBed.id, selectedResidentId);
+    await refetchBeds();
     setActionLoading(false);
     setShowAssignModal(false);
     setSelectedBed(null);
@@ -141,6 +142,7 @@ export function Dashboard() {
     if (!selectedBed?.resident) return;
     setActionLoading(true);
     await unassignResident(selectedBed.resident.id, selectedBed.id);
+    await refetchBeds();
     setActionLoading(false);
     setSelectedBed(null);
   };
@@ -149,6 +151,7 @@ export function Dashboard() {
     if (!selectedBed) return;
     setActionLoading(true);
     await updateBedStatus(selectedBed.id, 'out_of_service', 'Manual out of service');
+    await refetchBeds();
     setActionLoading(false);
     setSelectedBed(null);
   };
@@ -157,6 +160,7 @@ export function Dashboard() {
     if (!selectedBed) return;
     setActionLoading(true);
     await updateBedStatus(selectedBed.id, 'vacant');
+    await refetchBeds();
     setActionLoading(false);
     setSelectedBed(null);
   };
@@ -179,6 +183,7 @@ export function Dashboard() {
     // Assign to new bed (sets bed to occupied, updates resident's bed_id)
     await assignResident(selectedTargetBedId, selectedBed.resident.id);
 
+    await refetchBeds();
     setActionLoading(false);
     setShowMoveModal(false);
     setSelectedBed(null);
@@ -293,7 +298,7 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Total Occupancy Rate */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
@@ -332,7 +337,7 @@ export function Dashboard() {
       </div>
 
       {/* Gender-Specific Bed Availability */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
             <Icon name="wc" size={20} className="text-violet-600" />
@@ -389,7 +394,7 @@ export function Dashboard() {
 
       {/* Wing Summary - Show all wings when viewing all */}
       {!selectedWingId && wings.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
               <Icon name="domain" size={20} className="text-amber-600" />
@@ -444,7 +449,7 @@ export function Dashboard() {
         const wingRate = wingTotal > 0 ? Math.round((wingOccupied / wingTotal) * 100) : 0;
 
         return (
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
                 <Icon name="domain" size={20} className="text-amber-600" />

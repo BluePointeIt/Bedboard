@@ -599,7 +599,7 @@ export function Settings() {
       </div>
 
       {/* Facility Information */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
             <Icon name="domain" size={20} className="text-primary-500" />
@@ -645,7 +645,7 @@ export function Settings() {
       </div>
 
       {/* Budget Settings */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
             <Icon name="payments" size={20} className="text-green-600" />
@@ -777,7 +777,7 @@ export function Settings() {
       </div>
 
       {/* Facility Wings with Rooms and Beds */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">

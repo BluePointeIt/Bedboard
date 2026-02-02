@@ -20,7 +20,7 @@ export function SideNavBar({ wings, selectedWingId, onWingSelect, loading }: Sid
   const highOccupancyWing = wings.find((w) => w.occupancy_rate >= 90);
 
   return (
-    <aside className="w-64 border-r border-[#e7edf3] bg-white flex flex-col p-4 overflow-y-auto">
+    <aside className="w-64 border-r border-[#e7edf3] bg-white flex flex-col overflow-y-auto" style={{ padding: '24px' }}>
       <div className="mb-8">
         <h3 className="text-xs font-bold text-[#4c739a] uppercase tracking-wider mb-4 px-3">
           Facility Map

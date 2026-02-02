@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useResidents, type CreateResidentInput } from '../hooks/useResidents';
 import { useBeds, useBedActions } from '../hooks/useBeds';
-import { Icon, Button, Modal, DiagnosisSelect } from '../components';
+import { Icon, Button, Modal, DiagnosisSelect, ResidentCard, SlideOverPanel, ResidentDetailSidebar } from '../components';
 import type { Resident, IsolationType, PayorType, Gender } from '../types';
+import { getCompatibilityLabel, type BedCompatibilityScore } from '../lib/compatibilityUtils';
 
 const PAYOR_TYPES: { value: PayorType; label: string }[] = [
   { value: 'private', label: 'Private' },
@@ -33,7 +34,7 @@ export function Residents() {
   } = useResidents();
 
   const { beds, refetch: refetchBeds } = useBeds();
-  const { assignResident } = useBedActions();
+  const { assignResident, unassignResident, getBedRecommendationsForNewResident } = useBedActions();
 
   const [showDischargedTab, setShowDischargedTab] = useState(false);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
@@ -81,6 +82,33 @@ export function Residents() {
     admission_date: '',
     notes: '',
   });
+
+  // Transfer Bed Modal State
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferBedId, setTransferBedId] = useState<string>('');
+
+  // Bed recommendations state for new resident
+  const [bedRecommendations, setBedRecommendations] = useState<BedCompatibilityScore[]>([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+
+  // Fetch bed recommendations when add modal is open and gender is set
+  useEffect(() => {
+    if (showAddModal && newResident.gender) {
+      setRecommendationsLoading(true);
+      getBedRecommendationsForNewResident({
+        gender: newResident.gender,
+        is_isolation: newResident.is_isolation ?? false,
+        date_of_birth: newResident.date_of_birth || undefined,
+        diagnosis: newResident.diagnosis || undefined,
+        first_name: newResident.first_name || undefined,
+        last_name: newResident.last_name || undefined,
+      })
+        .then(setBedRecommendations)
+        .finally(() => setRecommendationsLoading(false));
+    } else {
+      setBedRecommendations([]);
+    }
+  }, [showAddModal, newResident.gender, newResident.is_isolation, newResident.date_of_birth, newResident.diagnosis]);
 
   const residents = showDischargedTab ? dischargedResidents : activeResidents;
 
@@ -226,48 +254,34 @@ export function Residents() {
     setSelectedResident(null);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  const getBedInfoForResident = (resident: Resident) => {
+    if (!resident.bed_id) return undefined;
+    const bed = beds.find(b => b.id === resident.bed_id);
+    if (!bed) return undefined;
+    return {
+      roomNumber: bed.room?.room_number || '',
+      bedLetter: bed.bed_letter,
+      wingName: bed.room?.wing?.name || '',
+    };
   };
 
-  const calculateAge = (dateOfBirth: string | undefined) => {
-    if (!dateOfBirth) return null;
-    const dob = new Date(dateOfBirth);
-    const today = new Date();
-    let age = today.getFullYear() - dob.getFullYear();
-    const monthDiff = today.getMonth() - dob.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-      age--;
+  const handleTransferBed = async () => {
+    if (!selectedResident || !transferBedId) return;
+    setActionLoading(true);
+
+    // If resident currently has a bed, unassign first
+    if (selectedResident.bed_id) {
+      await unassignResident(selectedResident.id, selectedResident.bed_id);
     }
-    return age;
-  };
 
-  const getPayorBadge = (payor: string) => {
-    const colors: Record<string, string> = {
-      private: 'bg-green-100 text-green-700',
-      medicare: 'bg-blue-100 text-blue-700',
-      medicaid: 'bg-purple-100 text-purple-700',
-      managed_care: 'bg-orange-100 text-orange-700',
-      bed_hold: 'bg-gray-100 text-gray-700',
-      hospice: 'bg-pink-100 text-pink-700',
-    };
-    return colors[payor] || 'bg-gray-100 text-gray-700';
-  };
+    // Assign to new bed
+    await assignResident(transferBedId, selectedResident.id);
+    await refetchBeds();
 
-  const getPayorLabel = (payor: string) => {
-    const labels: Record<string, string> = {
-      private: 'Private',
-      medicare: 'Medicare',
-      medicaid: 'Medicaid',
-      managed_care: 'Managed Care',
-      bed_hold: 'Bed Hold',
-      hospice: 'Hospice',
-    };
-    return labels[payor] || payor;
+    setActionLoading(false);
+    setShowTransferModal(false);
+    setTransferBedId('');
+    setSelectedResident(null);
   };
 
   if (loading) {
@@ -342,239 +356,51 @@ export function Residents() {
         </div>
       </div>
 
-      {/* Residents Table */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                MRN
-              </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Gender
-              </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Age
-              </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Payor
-              </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Diagnosis
-              </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Admission Date
-              </th>
-              {showDischargedTab && (
-                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  Discharge Date
-                </th>
-              )}
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {filteredResidents.length === 0 ? (
-              <tr>
-                <td colSpan={showDischargedTab ? 10 : 9} className="px-6 py-12 text-center text-slate-500">
-                  No residents found
-                </td>
-              </tr>
-            ) : (
-              filteredResidents.map((resident) => (
-                <tr key={resident.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          resident.gender === 'male' ? 'bg-primary-100' : 'bg-pink-100'
-                        }`}
-                      >
-                        <Icon
-                          name={resident.gender === 'male' ? 'male' : 'female'}
-                          size={20}
-                          className={resident.gender === 'male' ? 'text-primary-500' : 'text-pink-500'}
-                        />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {resident.first_name} {resident.last_name}
-                        </p>
-                        {resident.is_isolation && (
-                          <span className="inline-flex items-center gap-1 text-xs text-yellow-600">
-                            <Icon name="warning" size={12} />
-                            {resident.isolation_type || 'Isolation'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500 font-mono">
-                    {resident.medical_record_number || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500 capitalize">{resident.gender}</td>
-                  <td className="px-6 py-4 text-sm text-slate-500">
-                    {calculateAge(resident.date_of_birth) !== null ? `${calculateAge(resident.date_of_birth)}` : '-'}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getPayorBadge(
-                        resident.payor
-                      )}`}
-                    >
-                      {getPayorLabel(resident.payor)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500 max-w-[200px] truncate" title={resident.diagnosis || ''}>
-                    {resident.diagnosis || '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">
-                    {formatDate(resident.admission_date)}
-                  </td>
-                  {showDischargedTab && (
-                    <td className="px-6 py-4 text-sm text-slate-500">
-                      {resident.discharge_date ? formatDate(resident.discharge_date) : '-'}
-                    </td>
-                  )}
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                        resident.bed_id
-                          ? 'bg-green-100 text-green-700'
-                          : resident.status === 'active'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {resident.bed_id ? 'Assigned' : resident.status === 'active' ? 'Unassigned' : 'Discharged'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => setSelectedResident(resident)}
-                      className="text-primary-500 hover:text-primary-700"
-                    >
-                      <Icon name="more_vert" size={20} />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Residents Card Grid */}
+      {filteredResidents.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 px-6 py-12 text-center text-slate-500">
+          No residents found
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {filteredResidents.map((resident) => (
+            <ResidentCard
+              key={resident.id}
+              resident={resident}
+              bedInfo={getBedInfoForResident(resident)}
+              isSelected={selectedResident?.id === resident.id}
+              onClick={() => setSelectedResident(resident)}
+            />
+          ))}
+        </div>
+      )}
 
-      {/* Resident Detail Modal */}
-      <Modal
-        isOpen={!!selectedResident && !showIsolationModal}
+      {/* Resident Detail Sidebar */}
+      <SlideOverPanel
+        isOpen={!!selectedResident && !showIsolationModal && !showDischargeModal && !showEditModal && !showTransferModal}
         onClose={() => setSelectedResident(null)}
-        title={`${selectedResident?.first_name} ${selectedResident?.last_name}`}
-        size="md"
       >
         {selectedResident && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-slate-500">Medical Record #</p>
-                <p className="font-medium text-slate-900 font-mono">
-                  {selectedResident.medical_record_number || '-'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Gender</p>
-                <p className="font-medium text-slate-900 capitalize">{selectedResident.gender}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Date of Birth</p>
-                <p className="font-medium text-slate-900">
-                  {selectedResident.date_of_birth
-                    ? `${formatDate(selectedResident.date_of_birth)} (${calculateAge(selectedResident.date_of_birth)} years old)`
-                    : '-'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Payor</p>
-                <p className="font-medium text-slate-900">
-                  {getPayorLabel(selectedResident.payor)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">Admission Date</p>
-                <p className="font-medium text-slate-900">{formatDate(selectedResident.admission_date)}</p>
-              </div>
-              {selectedResident.status === 'discharged' && selectedResident.discharge_date && (
-                <div>
-                  <p className="text-sm text-slate-500">Discharge Date</p>
-                  <p className="font-medium text-slate-900">{formatDate(selectedResident.discharge_date)}</p>
-                </div>
-              )}
-              <div>
-                <p className="text-sm text-slate-500">Status</p>
-                <p className="font-medium text-slate-900 capitalize">{selectedResident.status}</p>
-              </div>
-            </div>
-
-            {selectedResident.diagnosis && (
-              <div>
-                <p className="text-sm text-slate-500">Diagnosis</p>
-                <p className="font-medium text-slate-900">{selectedResident.diagnosis}</p>
-              </div>
-            )}
-
-            {selectedResident.notes && (
-              <div>
-                <p className="text-sm text-slate-500">Notes</p>
-                <p className="font-medium text-slate-900">{selectedResident.notes}</p>
-              </div>
-            )}
-
-            {selectedResident.is_isolation && (
-              <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <p className="text-sm font-medium text-yellow-800">
-                  Isolation: {selectedResident.isolation_type || 'Active'}
-                </p>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-200">
-              {selectedResident.status === 'active' && (
-                <>
-                  <Button onClick={handleEditClick}>
-                    <Icon name="edit" size={16} className="mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setIsolationType(selectedResident.isolation_type || 'respiratory');
-                      setShowIsolationModal(true);
-                    }}
-                  >
-                    {selectedResident.is_isolation ? 'Remove Isolation' : 'Set Isolation'}
-                  </Button>
-                  <Button
-                    variant="danger"
-                    onClick={() => {
-                      setDischargeDate(new Date().toISOString().split('T')[0]);
-                      setShowDischargeModal(true);
-                    }}
-                  >
-                    Discharge
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
+          <ResidentDetailSidebar
+            resident={selectedResident}
+            bedInfo={getBedInfoForResident(selectedResident)}
+            onClose={() => setSelectedResident(null)}
+            onSetIsolation={() => {
+              setIsolationType(selectedResident.isolation_type || 'respiratory');
+              setShowIsolationModal(true);
+            }}
+            onDischarge={() => {
+              setDischargeDate(new Date().toISOString().split('T')[0]);
+              setShowDischargeModal(true);
+            }}
+            onEditProfile={handleEditClick}
+            onTransfer={() => {
+              setTransferBedId('');
+              setShowTransferModal(true);
+            }}
+          />
         )}
-      </Modal>
+      </SlideOverPanel>
 
       {/* Isolation Modal */}
       <Modal
@@ -797,17 +623,137 @@ export function Residents() {
               <Icon name="bed" size={16} className="text-slate-400" />
               Assign to Bed
             </label>
+
+            {/* Smart Recommendations */}
+            {recommendationsLoading ? (
+              <div className="flex items-center py-4">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500" />
+                <span className="ml-2 text-sm text-slate-500">Analyzing best bed options...</span>
+              </div>
+            ) : bedRecommendations.length > 0 ? (
+              <div className="space-y-2 mb-3">
+                <p className="text-xs text-slate-500 font-medium">Recommended Beds:</p>
+
+                {/* Top Recommendation */}
+                {bedRecommendations[0] && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBedId(bedRecommendations[0].bedId)}
+                    className={`w-full text-left p-3 rounded-lg border transition-all ${
+                      selectedBedId === bedRecommendations[0].bedId
+                        ? 'bg-amber-100 border-amber-400 ring-2 ring-amber-300'
+                        : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 hover:border-amber-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                        <Icon name="star" size={18} className="text-amber-500" />
+                        <span className="font-semibold text-slate-900">
+                          Room {bedRecommendations[0].bedInfo.roomNumber}{bedRecommendations[0].bedInfo.bedLetter}
+                        </span>
+                        <span className="text-xs text-slate-500">- {bedRecommendations[0].bedInfo.wingName}</span>
+                      </div>
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
+                        {bedRecommendations[0].totalScore}% match
+                      </span>
+                    </div>
+                    {bedRecommendations[0].roommate ? (
+                      <div className="mt-2 text-sm text-slate-600">
+                        <span className="font-medium">Roommate:</span> {bedRecommendations[0].roommate.name}
+                        {bedRecommendations[0].roommate.age !== null && ` (${bedRecommendations[0].roommate.age}yo)`}
+                        {bedRecommendations[0].roommate.diagnosis && `, ${bedRecommendations[0].roommate.diagnosis}`}
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-sm text-slate-600">
+                        <span className="font-medium">Empty room</span> - No roommate constraints
+                      </div>
+                    )}
+                    {bedRecommendations[0].warnings.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {bedRecommendations[0].warnings.map((warning, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded">
+                            <Icon name="warning" size={12} />
+                            {warning}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-2 flex gap-4 text-xs text-slate-500">
+                      <span>Age: {bedRecommendations[0].ageScore}%</span>
+                      <span>Diagnosis: {bedRecommendations[0].diagnosisScore}%</span>
+                      <span>Flexibility: {bedRecommendations[0].flexibilityScore}%</span>
+                    </div>
+                  </button>
+                )}
+
+                {/* Other Recommendations */}
+                {bedRecommendations.slice(1, 4).map((rec) => {
+                  const { color, icon } = getCompatibilityLabel(rec.totalScore);
+                  return (
+                    <button
+                      key={rec.bedId}
+                      type="button"
+                      onClick={() => setSelectedBedId(rec.bedId)}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        selectedBedId === rec.bedId
+                          ? 'bg-primary-50 border-primary-400 ring-2 ring-primary-300'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Icon
+                            name={icon}
+                            size={16}
+                            className={color === 'green' ? 'text-green-500' : color === 'yellow' ? 'text-yellow-500' : 'text-orange-500'}
+                          />
+                          <span className="font-medium text-slate-900">
+                            Room {rec.bedInfo.roomNumber}{rec.bedInfo.bedLetter}
+                          </span>
+                          <span className="text-xs text-slate-500">- {rec.bedInfo.wingName}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          color === 'green' ? 'bg-green-100 text-green-700' :
+                          color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-orange-100 text-orange-700'
+                        }`}>
+                          {rec.totalScore}%
+                        </span>
+                      </div>
+                      {rec.roommate && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Roommate: {rec.roommate.name}
+                          {rec.roommate.age !== null && ` (${rec.roommate.age}yo)`}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {bedRecommendations.length > 4 && (
+                  <p className="text-xs text-slate-500 text-center pt-1">
+                    +{bedRecommendations.length - 4} more beds available
+                  </p>
+                )}
+              </div>
+            ) : null}
+
+            {/* Fallback select for manual selection or no assignment */}
             <select
               value={selectedBedId}
               onChange={(e) => setSelectedBedId(e.target.value)}
               className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
             >
               <option value="">No bed assignment (will remain unassigned)</option>
-              {vacantBeds.map((bed) => (
-                <option key={bed.id} value={bed.id}>
-                  {bed.room?.wing?.name} - Room {bed.room?.room_number} - Bed {bed.bed_letter}
-                </option>
-              ))}
+              {vacantBeds.map((bed) => {
+                const rec = bedRecommendations.find(r => r.bedId === bed.id);
+                return (
+                  <option key={bed.id} value={bed.id}>
+                    {bed.room?.wing?.name} - Room {bed.room?.room_number} - Bed {bed.bed_letter}
+                    {rec ? ` (${rec.totalScore}% match)` : ''}
+                  </option>
+                );
+              })}
             </select>
             {vacantBeds.length === 0 && (
               <p className="text-xs text-slate-500 mt-1">No vacant beds available</p>
@@ -1035,6 +981,69 @@ export function Residents() {
             </Button>
             <Button onClick={handleSaveEdit} loading={editLoading}>
               Save Changes
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Transfer Bed Modal */}
+      <Modal
+        isOpen={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        title="Transfer Bed"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Select a new bed for{' '}
+            <span className="font-semibold">
+              {selectedResident?.first_name} {selectedResident?.last_name}
+            </span>
+          </p>
+
+          {selectedResident?.bed_id && (
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <p className="text-xs text-slate-500 mb-1">Current Bed</p>
+              <p className="text-sm font-medium text-slate-900">
+                {getBedInfoForResident(selectedResident)
+                  ? `${getBedInfoForResident(selectedResident)?.wingName} - Room ${getBedInfoForResident(selectedResident)?.roomNumber} - Bed ${getBedInfoForResident(selectedResident)?.bedLetter}`
+                  : 'Unassigned'}
+              </p>
+            </div>
+          )}
+
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="bed" size={16} className="text-slate-400" />
+              New Bed *
+            </label>
+            <select
+              value={transferBedId}
+              onChange={(e) => setTransferBedId(e.target.value)}
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
+            >
+              <option value="">Select a bed...</option>
+              {vacantBeds.map((bed) => (
+                <option key={bed.id} value={bed.id}>
+                  {bed.room?.wing?.name} - Room {bed.room?.room_number} - Bed {bed.bed_letter}
+                </option>
+              ))}
+            </select>
+            {vacantBeds.length === 0 && (
+              <p className="text-xs text-slate-500 mt-1">No vacant beds available</p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-slate-200">
+            <Button variant="secondary" onClick={() => setShowTransferModal(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleTransferBed}
+              loading={actionLoading}
+              disabled={!transferBedId}
+            >
+              Transfer
             </Button>
           </div>
         </div>

@@ -30,7 +30,7 @@ export function AppLayout({ user, onSignOut }: AppLayoutProps) {
           onWingSelect={setSelectedWingId}
           loading={loading}
         />
-        <main className="flex-1 overflow-y-auto bg-[#f6f7f8] p-8">
+        <main className="flex-1 overflow-y-auto bg-[#f6f7f8]" style={{ padding: '32px' }}>
           <div className="max-w-[1400px] mx-auto">
             <Outlet context={{ searchQuery, selectedWingId, wings }} />
           </div>

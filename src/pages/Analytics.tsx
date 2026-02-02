@@ -246,7 +246,7 @@ export function Analytics() {
       </div>
 
       {/* Occupancy Overview */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-primary-500/10 flex items-center justify-center">
             <Icon name="analytics" size={20} className="text-primary-500" />
@@ -278,7 +278,7 @@ export function Analytics() {
 
         {/* Target vs Actual Occupancy */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl p-6 border border-primary-200">
+          <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl border border-primary-200" style={{ padding: '24px' }}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-sm font-medium text-primary-700">Target Occupancy</p>
@@ -297,11 +297,11 @@ export function Analytics() {
             </div>
           </div>
 
-          <div className={`rounded-xl p-6 border ${
+          <div className={`rounded-xl border ${
             analytics.actualOccupancyRate >= analytics.targetOccupancyRate
               ? 'bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-200'
               : 'bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-200'
-          }`}>
+          }`} style={{ padding: '24px' }}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className={`text-sm font-medium ${
@@ -355,7 +355,7 @@ export function Analytics() {
       </div>
 
       {/* Case-Mix Budget vs Actual */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
             <Icon name="payments" size={20} className="text-green-600" />
@@ -454,7 +454,7 @@ export function Analytics() {
       </div>
 
       {/* Gender-Specific Bed Availability */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
             <Icon name="wc" size={20} className="text-violet-600" />
@@ -467,7 +467,7 @@ export function Analytics() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Male Available */}
-          <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl p-6 border border-primary-200">
+          <div className="bg-gradient-to-br from-primary-500/10 to-primary-500/5 rounded-xl border border-primary-200" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-primary-500 flex items-center justify-center">
                 <Icon name="male" size={28} className="text-white" />
@@ -483,7 +483,7 @@ export function Analytics() {
           </div>
 
           {/* Female Available */}
-          <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-xl p-6 border border-pink-200">
+          <div className="bg-gradient-to-br from-pink-500/10 to-pink-500/5 rounded-xl border border-pink-200" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-pink-500 flex items-center justify-center">
                 <Icon name="female" size={28} className="text-white" />
@@ -499,7 +499,7 @@ export function Analytics() {
           </div>
 
           {/* Either Gender */}
-          <div className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 rounded-xl p-6 border border-violet-200">
+          <div className="bg-gradient-to-br from-violet-500/10 to-violet-500/5 rounded-xl border border-violet-200" style={{ padding: '24px' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-full bg-violet-500 flex items-center justify-center">
                 <Icon name="group" size={28} className="text-white" />
@@ -533,7 +533,7 @@ export function Analytics() {
       </div>
 
       {/* Wing-by-Wing Summary */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
             <Icon name="domain" size={20} className="text-amber-600" />

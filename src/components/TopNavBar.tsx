@@ -57,7 +57,7 @@ export function TopNavBar({ searchQuery, onSearchChange, user, onSignOut }: TopN
   const userInitials = userEmail.charAt(0).toUpperCase();
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-solid border-[#e7edf3] bg-white px-10 z-20">
+    <header className="flex h-16 items-center justify-between border-b border-solid border-[#e7edf3] bg-white z-20" style={{ paddingLeft: '24px', paddingRight: '24px' }}>
       <div className="flex items-center gap-8">
         <div className="flex items-center gap-4">
           <div className="size-8 text-primary-500">

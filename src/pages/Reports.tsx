@@ -546,7 +546,7 @@ export function Reports() {
           </div>
 
           {/* Gender Distribution */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <h3 className="font-semibold text-slate-900 mb-4">Gender Distribution</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-3 p-4 bg-primary-50 rounded-lg border border-primary-200">
@@ -636,7 +636,7 @@ export function Reports() {
         /* Custom Report */
         <div className="space-y-6">
           {/* Field Selection */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <h3 className="font-semibold text-slate-900 mb-4">Select Report Fields</h3>
             <div className="flex flex-wrap gap-3">
               {customFields.map((field) => (
@@ -665,7 +665,7 @@ export function Reports() {
           </div>
 
           {/* Resident Status Filter */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <h3 className="font-semibold text-slate-900 mb-4">Filter by Resident Status</h3>
             <div className="flex flex-wrap gap-3">
               <button
@@ -705,7 +705,7 @@ export function Reports() {
           </div>
 
           {/* Bed Status Filter */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <h3 className="font-semibold text-slate-900 mb-4">Filter by Bed Status</h3>
             <div className="flex flex-wrap gap-3">
               <button
@@ -759,7 +759,7 @@ export function Reports() {
           </div>
 
           {/* Gender Filter */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <h3 className="font-semibold text-slate-900 mb-4">Filter by Gender</h3>
             <div className="flex flex-wrap gap-3">
               <button
@@ -797,7 +797,7 @@ export function Reports() {
           </div>
 
           {/* Isolation Filter */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <h3 className="font-semibold text-slate-900 mb-4">Filter by Isolation Status</h3>
             <div className="flex flex-wrap gap-3">
               <button
@@ -846,7 +846,7 @@ export function Reports() {
           </div>
 
           {/* Diagnosis Filter */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <h3 className="font-semibold text-slate-900 mb-4">Filter by Diagnosis</h3>
             <div className="relative" ref={diagnosisDropdownRef}>
               <button
@@ -921,7 +921,7 @@ export function Reports() {
           </div>
 
           {/* Date Range Filter */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6">
+          <div className="bg-white rounded-xl border border-slate-200" style={{ padding: '24px' }}>
             <h3 className="font-semibold text-slate-900 mb-4">Filter by Admission Date</h3>
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-col gap-1.5">
