@@ -208,7 +208,7 @@ export function useBeds(filters?: FilterOptions) {
 }
 
 export function useBedActions() {
-  async function updateBedStatus(bedId: string, status: BedStatus, reason?: string) {
+  const updateBedStatus = useCallback(async (bedId: string, status: BedStatus, reason?: string) => {
     const updateData: { status: BedStatus; updated_at: string; out_of_service_reason?: string | null } = {
       status,
       updated_at: new Date().toISOString(),
@@ -226,9 +226,9 @@ export function useBedActions() {
       .eq('id', bedId);
 
     return { error };
-  }
+  }, []);
 
-  async function assignResident(bedId: string, residentId: string) {
+  const assignResident = useCallback(async (bedId: string, residentId: string) => {
     // Update resident's bed_id
     const { error: residentError } = await supabase
       .from('residents')
@@ -244,9 +244,9 @@ export function useBedActions() {
       .eq('id', bedId);
 
     return { error: bedError };
-  }
+  }, []);
 
-  async function unassignResident(residentId: string, bedId: string) {
+  const unassignResident = useCallback(async (residentId: string, bedId: string) => {
     // Remove resident's bed_id
     const { error: residentError } = await supabase
       .from('residents')
@@ -262,9 +262,9 @@ export function useBedActions() {
       .eq('id', bedId);
 
     return { error: bedError };
-  }
+  }, []);
 
-  const createBed = async (roomId: string, bedLetter: string) => {
+  const createBed = useCallback(async (roomId: string, bedLetter: string) => {
     const { data, error } = await supabase
       .from('beds')
       .insert({
@@ -276,9 +276,9 @@ export function useBedActions() {
       .single();
 
     return { error, data };
-  };
+  }, []);
 
-  const deleteBed = async (bedId: string) => {
+  const deleteBed = useCallback(async (bedId: string) => {
     // First check if the bed is vacant
     const { data: bed, error: fetchError } = await supabase
       .from('beds')
@@ -300,9 +300,9 @@ export function useBedActions() {
       .eq('id', bedId);
 
     return { error };
-  };
+  }, []);
 
-  const getNextAvailableBedLetter = async (roomId: string): Promise<string> => {
+  const getNextAvailableBedLetter = useCallback(async (roomId: string): Promise<string> => {
     const { data: existingBeds } = await supabase
       .from('beds')
       .select('bed_letter')
@@ -318,7 +318,7 @@ export function useBedActions() {
     }
 
     return 'A'; // Fallback
-  };
+  }, []);
 
   /**
    * Check if a resident's gender and isolation status is compatible with a bed's room and shared bathroom group.
@@ -328,7 +328,7 @@ export function useBedActions() {
    * - In a room with an isolation resident, only another isolation resident of the same sex can be placed
    * - Non-isolation residents cannot be placed with isolation residents in the same room
    */
-  const checkGenderCompatibility = async (
+  const checkGenderCompatibility = useCallback(async (
     bedId: string,
     residentGender: Gender,
     residentIsIsolation: boolean = false
@@ -500,13 +500,13 @@ export function useBedActions() {
       roomBedCount,
       sharedBathroomRooms,
     };
-  };
+  }, []);
 
   /**
    * Get the required gender for a bed based on room/bathroom occupancy.
    * Returns null if any gender is allowed, or the required gender.
    */
-  const getRequiredGenderForBed = async (bedId: string): Promise<Gender | null> => {
+  const getRequiredGenderForBed = useCallback(async (bedId: string): Promise<Gender | null> => {
     if (!supabaseConfigured) {
       return null;
     }
@@ -590,13 +590,13 @@ export function useBedActions() {
     }
 
     return residents[0].gender as Gender;
-  };
+  }, []);
 
   /**
    * Get scored bed recommendations for a resident.
    * Returns all vacant, compatible beds sorted by compatibility score.
    */
-  const getBedRecommendations = async (
+  const getBedRecommendations = useCallback(async (
     residentId: string
   ): Promise<BedCompatibilityScore[]> => {
     if (!supabaseConfigured) {
@@ -778,12 +778,12 @@ export function useBedActions() {
     }
 
     return scores;
-  };
+  }, []);
 
   /**
    * Get move optimization suggestions to improve bed availability.
    */
-  const getMoveOptimizations = async (
+  const getMoveOptimizations = useCallback(async (
     unassignedResidents: Resident[]
   ): Promise<MoveRecommendation[]> => {
     if (!supabaseConfigured) {
@@ -878,13 +878,13 @@ export function useBedActions() {
     const rooms = Array.from(roomsMap.values());
 
     return analyzeOccupancyOptimization(rooms, unassignedResidents);
-  };
+  }, []);
 
   /**
    * Get scored bed recommendations for a NEW resident (not yet in database).
    * Takes resident data directly instead of requiring an ID.
    */
-  const getBedRecommendationsForNewResident = async (
+  const getBedRecommendationsForNewResident = useCallback(async (
     residentData: {
       gender: Gender;
       is_isolation: boolean;
@@ -1078,7 +1078,7 @@ export function useBedActions() {
     }
 
     return scores;
-  };
+  }, []);
 
   return {
     updateBedStatus,
