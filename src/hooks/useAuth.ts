@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { User } from '../types';
@@ -15,16 +15,20 @@ export function useAuth() {
     profile: null,
     loading: true,
   });
+  const profileFetchedRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
       setState((prev) => ({
         ...prev,
         user: session?.user ?? null,
         loading: false,
       }));
 
-      if (session?.user) {
+      if (session?.user && profileFetchedRef.current !== session.user.id) {
         fetchProfile(session.user.id);
       }
     });
@@ -32,32 +36,41 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setState((prev) => ({
         ...prev,
         user: session?.user ?? null,
         loading: false,
       }));
 
-      if (session?.user) {
+      if (session?.user && profileFetchedRef.current !== session.user.id) {
         fetchProfile(session.user.id);
-      } else {
+      } else if (!session?.user) {
+        profileFetchedRef.current = null;
         setState((prev) => ({ ...prev, profile: null }));
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function fetchProfile(userId: string) {
+    // Prevent duplicate fetches for the same user
+    if (profileFetchedRef.current === userId) return;
+    profileFetchedRef.current = userId;
+
     try {
+      // Use maybeSingle() instead of single() to avoid 406 errors when no rows exist
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        // Users table may not exist or RLS policy blocking - fail silently
         console.warn('Could not fetch user profile:', error.message);
         return;
       }
@@ -66,7 +79,6 @@ export function useAuth() {
         setState((prev) => ({ ...prev, profile: data }));
       }
     } catch (err) {
-      // Network or other errors - fail silently to not block UI
       console.warn('Error fetching profile:', err);
     }
   }
