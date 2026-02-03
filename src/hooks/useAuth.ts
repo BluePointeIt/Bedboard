@@ -49,14 +49,25 @@ export function useAuth() {
   }, []);
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-    if (data) {
-      setState((prev) => ({ ...prev, profile: data }));
+      if (error) {
+        // Users table may not exist or RLS policy blocking - fail silently
+        console.warn('Could not fetch user profile:', error.message);
+        return;
+      }
+
+      if (data) {
+        setState((prev) => ({ ...prev, profile: data }));
+      }
+    } catch (err) {
+      // Network or other errors - fail silently to not block UI
+      console.warn('Error fetching profile:', err);
     }
   }
 
