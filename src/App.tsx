@@ -2,11 +2,40 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components';
 import { Dashboard, Residents, Admissions, Analytics, Login, Settings, Reports } from './pages';
 import { useAuth } from './hooks/useAuth';
+import { canAccessRoute } from './lib/permissions';
+import type { User } from './types';
 
 const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-function AuthenticatedApp() {
-  const { user, loading, signIn, signUp, signOut } = useAuth();
+/**
+ * Protected route component that checks permissions before rendering.
+ * Redirects to Analytics page if user doesn't have access.
+ */
+function ProtectedRoute({
+  children,
+  route,
+  profile,
+}: {
+  children: React.ReactNode;
+  route: string;
+  profile: User | null;
+}) {
+  // If no profile yet (still loading), show the component anyway
+  // This prevents flickering while profile loads
+  if (!profile) {
+    return <>{children}</>;
+  }
+
+  // Check if user can access this route
+  if (!canAccessRoute(profile, route)) {
+    return <Navigate to="/analytics" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AuthenticatedRoutes() {
+  const { user, profile, loading, signIn, signUp, signOut } = useAuth();
 
   if (loading) {
     return (
@@ -21,49 +50,51 @@ function AuthenticatedApp() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout user={user} onSignOut={signOut} />}>
-          <Route path="/" element={<Navigate to="/analytics" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/residents" element={<Residents />} />
-          <Route path="/admissions" element={<Admissions />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/analytics" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route element={<AppLayout user={user} onSignOut={signOut} />}>
+        <Route path="/" element={<Navigate to="/analytics" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/residents" element={<Residents />} />
+        <Route path="/admissions" element={<Admissions />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute route="/settings" profile={profile}>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
+      <Route path="*" element={<Navigate to="/analytics" replace />} />
+    </Routes>
   );
 }
 
-function UnauthenticatedApp() {
+function UnauthenticatedRoutes() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<Navigate to="/analytics" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/residents" element={<Residents />} />
-          <Route path="/admissions" element={<Admissions />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/analytics" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<Navigate to="/analytics" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/residents" element={<Residents />} />
+        <Route path="/admissions" element={<Admissions />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/settings" element={<Settings />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/analytics" replace />} />
+    </Routes>
   );
 }
 
 function App() {
-  if (supabaseConfigured) {
-    return <AuthenticatedApp />;
-  }
-
-  // Run without authentication when Supabase is not configured
-  return <UnauthenticatedApp />;
+  return (
+    <BrowserRouter>
+      {supabaseConfigured ? <AuthenticatedRoutes /> : <UnauthenticatedRoutes />}
+    </BrowserRouter>
+  );
 }
 
 export default App;

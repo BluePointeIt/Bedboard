@@ -20,6 +20,34 @@ interface ResidentWithBed {
   bed: { id: string; room: { wing_id: string } };
 }
 
+/**
+ * Type guard to validate BedWithRoom structure from Supabase response.
+ */
+function isBedWithRoom(data: unknown): data is BedWithRoom {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as Record<string, unknown>;
+  if (typeof obj.id !== 'string' || typeof obj.status !== 'string') return false;
+  if (!obj.room || typeof obj.room !== 'object') return false;
+  const room = obj.room as Record<string, unknown>;
+  return typeof room.wing_id === 'string';
+}
+
+/**
+ * Type guard to validate ResidentWithBed structure from Supabase response.
+ */
+function isResidentWithBed(data: unknown): data is ResidentWithBed {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as Record<string, unknown>;
+  if (typeof obj.id !== 'string' || typeof obj.gender !== 'string') return false;
+  if (typeof obj.is_isolation !== 'boolean') return false;
+  if (!obj.bed || typeof obj.bed !== 'object') return false;
+  const bed = obj.bed as Record<string, unknown>;
+  if (typeof bed.id !== 'string') return false;
+  if (!bed.room || typeof bed.room !== 'object') return false;
+  const room = bed.room as Record<string, unknown>;
+  return typeof room.wing_id === 'string';
+}
+
 export function useDashboardStats(wingId?: string | null) {
   const [stats, setStats] = useState<DashboardStats>({
     total_beds: 0,
@@ -60,10 +88,13 @@ export function useDashboardStats(wingId?: string | null) {
       return;
     }
 
-    // Filter by wing if specified
-    let filteredBeds = (bedsData || []) as unknown as BedWithRoom[];
+    // Filter by wing if specified - validate and cast data structure
+    // The type guard validates each element at runtime, making this cast safe
+    // We use 'unknown' intermediate cast because Supabase infers joins as arrays
+    const validatedBeds = (bedsData || []).filter(isBedWithRoom) as unknown as BedWithRoom[];
+    let filteredBeds = validatedBeds;
     if (wingId) {
-      filteredBeds = filteredBeds.filter((bed) => bed.room?.wing_id === wingId);
+      filteredBeds = filteredBeds.filter((bed) => bed.room.wing_id === wingId);
     }
 
     // Get all active residents with beds for gender and isolation counts
@@ -88,9 +119,13 @@ export function useDashboardStats(wingId?: string | null) {
     let isolationCount = 0;
 
     if (residentsData) {
-      let filteredResidents = residentsData as unknown as ResidentWithBed[];
+      // Validate and cast data structure
+      // The type guard validates each element at runtime, making this cast safe
+      // We use 'unknown' intermediate cast because Supabase infers joins as arrays
+      const validatedResidents = residentsData.filter(isResidentWithBed) as unknown as ResidentWithBed[];
+      let filteredResidents = validatedResidents;
       if (wingId) {
-        filteredResidents = filteredResidents.filter((r) => r.bed?.room?.wing_id === wingId);
+        filteredResidents = filteredResidents.filter((r) => r.bed.room.wing_id === wingId);
       }
 
       maleOccupied = filteredResidents.filter((r) => r.gender === 'male').length;

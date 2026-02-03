@@ -1,6 +1,9 @@
 export { AppLayout } from './AppLayout';
+export { BedAssignmentModal } from './BedAssignmentModal';
 export { BedCard } from './BedCard';
+export { BedDetailModal } from './BedDetailModal';
 export { BedGrid } from './BedGrid';
+export { BedMoveModal } from './BedMoveModal';
 export { Button } from './Button';
 export { DiagnosisSelect } from './DiagnosisSelect';
 export { FilterLegend } from './FilterLegend';

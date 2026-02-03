@@ -5,6 +5,13 @@ import { useRooms, useRoomActions } from '../hooks/useRooms';
 import { useBedActions } from '../hooks/useBeds';
 import { supabase } from '../lib/supabase';
 import type { WingType, WingWithStats, RoomWithBeds, Room, Bed } from '../types';
+import {
+  validateNonNegativeNumber,
+  validateRoomNumber,
+  validateBedLetter,
+  validateCSVFile,
+  validateCSVRow,
+} from '../lib/validation';
 
 const WING_TYPES: { value: WingType; label: string }[] = [
   { value: 'rehab', label: 'Rehabilitation' },
@@ -195,13 +202,24 @@ export function Settings() {
 
   const updatePayorRate = (payor: keyof PayorRates, value: string) => {
     const numValue = value === '' ? 0 : Number(value);
-    setPayorRates((prev) => ({ ...prev, [payor]: numValue }));
+    // Validate non-negative number
+    const validation = validateNonNegativeNumber(numValue, payor);
+    if (validation.valid) {
+      setPayorRates((prev) => ({ ...prev, [payor]: numValue }));
+    }
   };
 
   // Import handlers
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validate CSV file
+    const fileValidation = validateCSVFile(file);
+    if (!fileValidation.valid) {
+      setImportError(fileValidation.error || 'Invalid file');
+      return;
+    }
 
     setImportFile(file);
     setImportError(null);
@@ -256,6 +274,13 @@ export function Settings() {
       let skipped = 0;
 
       for (const row of importPreview) {
+        // Validate row data
+        const rowValidation = validateCSVRow(row);
+        if (!rowValidation.valid) {
+          skipped++;
+          continue;
+        }
+
         // Find the wing by name
         const wing = wings.find(w =>
           w.name.toLowerCase() === row.wing_name.toLowerCase()
@@ -404,6 +429,13 @@ export function Settings() {
   const handleSaveNewRoom = async () => {
     if (!addRoomWingId || !addRoomForm.room_number.trim()) return;
 
+    // Validate room number
+    const roomValidation = validateRoomNumber(addRoomForm.room_number);
+    if (!roomValidation.valid) {
+      setActionError(roomValidation.error || 'Invalid room number');
+      return;
+    }
+
     setSaving(true);
     setActionError(null);
 
@@ -463,6 +495,13 @@ export function Settings() {
 
   const handleSaveEditRoom = async () => {
     if (!selectedRoom || !editRoomForm.room_number.trim()) return;
+
+    // Validate room number
+    const roomValidation = validateRoomNumber(editRoomForm.room_number);
+    if (!roomValidation.valid) {
+      setActionError(roomValidation.error || 'Invalid room number');
+      return;
+    }
 
     setSaving(true);
     setActionError(null);
@@ -547,6 +586,13 @@ export function Settings() {
 
   const handleSaveNewBed = async () => {
     if (!addBedRoomId || !addBedForm.bed_letter.trim()) return;
+
+    // Validate bed letter
+    const bedValidation = validateBedLetter(addBedForm.bed_letter);
+    if (!bedValidation.valid) {
+      setActionError(bedValidation.error || 'Invalid bed letter');
+      return;
+    }
 
     setSaving(true);
     setActionError(null);

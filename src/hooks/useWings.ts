@@ -13,6 +13,18 @@ interface BedWithRoom {
   room: { wing_id: string };
 }
 
+/**
+ * Type guard to validate BedWithRoom structure from Supabase response.
+ */
+function isBedWithRoom(data: unknown): data is BedWithRoom {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as Record<string, unknown>;
+  if (typeof obj.id !== 'string' || typeof obj.status !== 'string') return false;
+  if (!obj.room || typeof obj.room !== 'object') return false;
+  const room = obj.room as Record<string, unknown>;
+  return typeof room.wing_id === 'string';
+}
+
 export interface UpdateWingInput {
   name?: string;
   wing_type?: WingType;
@@ -56,11 +68,14 @@ export function useWings() {
         )
       `);
 
-    const beds = (bedsData || []) as unknown as BedWithRoom[];
+    // Validate and cast data structure
+    // The type guard validates each element at runtime, making this cast safe
+    // We use 'unknown' intermediate cast because Supabase infers joins as arrays
+    const beds = (bedsData || []).filter(isBedWithRoom) as unknown as BedWithRoom[];
 
     // Calculate stats for each wing
     const wingsWithStats: WingWithStats[] = (wingsData || []).map((wing: Wing) => {
-      const wingBeds = beds.filter((bed) => bed.room?.wing_id === wing.id);
+      const wingBeds = beds.filter((bed) => bed.room.wing_id === wing.id);
       const totalBeds = wingBeds.length;
       const occupiedBeds = wingBeds.filter((bed) => bed.status === 'occupied').length;
       const occupancyRate = totalBeds > 0 ? (occupiedBeds / totalBeds) * 100 : 0;
@@ -202,8 +217,11 @@ export function useWings() {
       `)
       .eq('status', 'vacant');
 
-    const typedVacantBeds = (vacantBeds || []) as unknown as BedWithRoom[];
-    const wingVacantBeds = typedVacantBeds.filter((b) => b.room?.wing_id === wingId);
+    // Validate and cast data structure
+    // The type guard validates each element at runtime, making this cast safe
+    // We use 'unknown' intermediate cast because Supabase infers joins as arrays
+    const validVacantBeds = (vacantBeds || []).filter(isBedWithRoom) as unknown as BedWithRoom[];
+    const wingVacantBeds = validVacantBeds.filter((b) => b.room.wing_id === wingId);
 
     if (wingVacantBeds.length === 0) {
       return { error: new Error('No vacant beds to remove') };

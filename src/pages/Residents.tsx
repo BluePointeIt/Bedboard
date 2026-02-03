@@ -4,6 +4,12 @@ import { useBeds, useBedActions } from '../hooks/useBeds';
 import { Icon, Button, Modal, DiagnosisSelect, ResidentCard, SlideOverPanel, ResidentDetailSidebar } from '../components';
 import type { Resident, IsolationType, PayorType, Gender } from '../types';
 import { getCompatibilityLabel, type BedCompatibilityScore } from '../lib/compatibilityUtils';
+import {
+  validateDateOfBirth,
+  validateAdmissionDate,
+  validateDischargeDate,
+  validateResidentForm,
+} from '../lib/validation';
 
 const PAYOR_TYPES: { value: PayorType; label: string }[] = [
   { value: 'private', label: 'Private' },
@@ -120,6 +126,15 @@ export function Residents() {
 
   const handleDischarge = async () => {
     if (!selectedResident) return;
+
+    // Validate discharge date is after admission date
+    const dischargeValidation = validateDischargeDate(dischargeDate, selectedResident.admission_date);
+    if (!dischargeValidation.valid) {
+      // Show error to user - we'll need to add state for this
+      alert(dischargeValidation.error || 'Invalid discharge date');
+      return;
+    }
+
     setActionLoading(true);
     await dischargeResident(selectedResident.id, undefined, dischargeDate);
     setActionLoading(false);
@@ -142,8 +157,29 @@ export function Residents() {
   };
 
   const handleAddResident = async () => {
-    if (!newResident.first_name.trim() || !newResident.last_name.trim()) {
-      setAddError('First name and last name are required');
+    // Validate form data
+    const formValidation = validateResidentForm({
+      first_name: newResident.first_name,
+      last_name: newResident.last_name,
+      date_of_birth: newResident.date_of_birth,
+      admission_date: newResident.admission_date,
+    });
+
+    if (!formValidation.valid) {
+      setAddError(formValidation.error || 'Please fix validation errors');
+      return;
+    }
+
+    // Additional date validation
+    const dobValidation = validateDateOfBirth(newResident.date_of_birth);
+    if (!dobValidation.valid) {
+      setAddError(dobValidation.error || 'Invalid date of birth');
+      return;
+    }
+
+    const admissionValidation = validateAdmissionDate(newResident.admission_date);
+    if (!admissionValidation.valid) {
+      setAddError(admissionValidation.error || 'Invalid admission date');
       return;
     }
 
@@ -222,8 +258,30 @@ export function Residents() {
 
   const handleSaveEdit = async () => {
     if (!selectedResident) return;
-    if (!editForm.first_name.trim() || !editForm.last_name.trim()) {
-      setEditError('First name and last name are required');
+
+    // Validate form data
+    const formValidation = validateResidentForm({
+      first_name: editForm.first_name,
+      last_name: editForm.last_name,
+      date_of_birth: editForm.date_of_birth,
+      admission_date: editForm.admission_date,
+    });
+
+    if (!formValidation.valid) {
+      setEditError(formValidation.error || 'Please fix validation errors');
+      return;
+    }
+
+    // Additional date validation
+    const dobValidation = validateDateOfBirth(editForm.date_of_birth);
+    if (!dobValidation.valid) {
+      setEditError(dobValidation.error || 'Invalid date of birth');
+      return;
+    }
+
+    const admissionValidation = validateAdmissionDate(editForm.admission_date);
+    if (!admissionValidation.valid) {
+      setEditError(admissionValidation.error || 'Invalid admission date');
       return;
     }
 

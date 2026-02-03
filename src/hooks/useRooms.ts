@@ -144,7 +144,7 @@ export function useRooms(wingId?: string) {
 }
 
 export function useRoomActions() {
-  const createRoom = async (input: CreateRoomInput) => {
+  const createRoom = useCallback(async (input: CreateRoomInput) => {
     if (!supabaseConfigured) {
       return { error: new Error('Supabase not configured'), data: null };
     }
@@ -161,9 +161,9 @@ export function useRoomActions() {
       .single();
 
     return { error, data };
-  };
+  }, []);
 
-  const updateRoom = async (roomId: string, updates: UpdateRoomInput) => {
+  const updateRoom = useCallback(async (roomId: string, updates: UpdateRoomInput) => {
     if (!supabaseConfigured) {
       return { error: new Error('Supabase not configured') };
     }
@@ -174,9 +174,9 @@ export function useRoomActions() {
       .eq('id', roomId);
 
     return { error };
-  };
+  }, []);
 
-  const deleteRoom = async (roomId: string) => {
+  const deleteRoom = useCallback(async (roomId: string) => {
     if (!supabaseConfigured) {
       return { error: new Error('Supabase not configured') };
     }
@@ -198,9 +198,9 @@ export function useRoomActions() {
       .eq('id', roomId);
 
     return { error };
-  };
+  }, []);
 
-  const getRoomsByBathroomGroup = async (groupId: string) => {
+  const getRoomsByBathroomGroup = useCallback(async (groupId: string) => {
     if (!supabaseConfigured) {
       return { error: new Error('Supabase not configured'), data: [] };
     }
@@ -212,9 +212,9 @@ export function useRoomActions() {
       .order('room_number');
 
     return { error, data: data || [] };
-  };
+  }, []);
 
-  const getBathroomGroupsForWing = async (wingId: string): Promise<{ error: Error | null; data: BathroomGroup[] }> => {
+  const getBathroomGroupsForWing = useCallback(async (wingId: string): Promise<{ error: Error | null; data: BathroomGroup[] }> => {
     if (!supabaseConfigured) {
       return { error: new Error('Supabase not configured'), data: [] };
     }
@@ -248,7 +248,7 @@ export function useRoomActions() {
     }));
 
     return { error: null, data: groups };
-  };
+  }, []);
 
   return {
     createRoom,
