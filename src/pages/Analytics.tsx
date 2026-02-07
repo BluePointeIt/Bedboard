@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Icon } from '../components';
 import { useWings } from '../hooks/useWings';
 import { useBeds } from '../hooks/useBeds';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { Gender } from '../types';
 
@@ -39,8 +40,9 @@ const PAYOR_LABELS: Record<string, string> = {
 };
 
 export function Analytics() {
-  const { wings } = useWings();
-  const { beds, loading: bedsLoading } = useBeds();
+  const { currentFacility } = useAuth();
+  const { wings } = useWings({ facilityId: currentFacility?.id });
+  const { beds, loading: bedsLoading } = useBeds({ facilityId: currentFacility?.id });
   const [caseMixBudget, setCaseMixBudget] = useState<PayorRates>(DEFAULT_PAYOR_RATES);
   const [budgetLoading, setBudgetLoading] = useState(true);
 

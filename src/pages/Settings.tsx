@@ -3,6 +3,7 @@ import { Button, Icon, Modal } from '../components';
 import { useWings } from '../hooks/useWings';
 import { useRooms, useRoomActions } from '../hooks/useRooms';
 import { useBedActions } from '../hooks/useBeds';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { WingType, WingWithStats, RoomWithBeds, Room, Bed } from '../types';
 import {
@@ -44,6 +45,7 @@ const DEFAULT_PAYOR_RATES: PayorRates = {
 };
 
 export function Settings() {
+  const { currentFacility } = useAuth();
   const [facilityName, setFacilityName] = useState('MediBed Pro Facility');
   const [saved, setSaved] = useState(false);
 
@@ -52,8 +54,8 @@ export function Settings() {
   const [budgetSaved, setBudgetSaved] = useState(false);
   const [budgetLoading, setBudgetLoading] = useState(true);
 
-  const { wings, loading: wingsLoading, updateWing, refetch: refetchWings } = useWings();
-  const { rooms, loading: roomsLoading, refetch: refetchRooms } = useRooms();
+  const { wings, loading: wingsLoading, updateWing, refetch: refetchWings } = useWings({ facilityId: currentFacility?.id });
+  const { rooms, loading: roomsLoading, refetch: refetchRooms } = useRooms({ facilityId: currentFacility?.id });
   const { createRoom, updateRoom, deleteRoom, getBathroomGroupsForWing } = useRoomActions();
   const { createBed, deleteBed, getNextAvailableBedLetter } = useBedActions();
 
