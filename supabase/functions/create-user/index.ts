@@ -148,17 +148,16 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: createAuthError?.message || 'Failed to create auth user' }, 400);
     }
 
-    // Create public.users entry
+    // Update public.users entry (trigger already created it)
     const { error: createUserError } = await supabaseAdmin
       .from('users')
-      .insert({
-        id: authData.user.id,
-        email,
+      .update({
         full_name,
         role,
         primary_facility_id: primary_facility_id || null,
         is_active: true,
-      });
+      })
+      .eq('id', authData.user.id);
 
     if (createUserError) {
       // Rollback: delete auth user if public.users insert fails
