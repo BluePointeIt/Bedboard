@@ -6,6 +6,7 @@ export { BedGrid } from './BedGrid';
 export { BedMoveModal } from './BedMoveModal';
 export { Button } from './Button';
 export { DiagnosisSelect } from './DiagnosisSelect';
+export { FacilitySwitcher } from './FacilitySwitcher';
 export { FilterLegend } from './FilterLegend';
 export { Icon } from './Icon';
 export { Modal } from './Modal';

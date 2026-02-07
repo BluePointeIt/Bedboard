@@ -30,7 +30,12 @@ export interface UpdateWingInput {
   wing_type?: WingType;
 }
 
-export function useWings() {
+export interface UseWingsOptions {
+  facilityId?: string | null;
+}
+
+export function useWings(options?: UseWingsOptions) {
+  const facilityId = options?.facilityId;
   const [wings, setWings] = useState<WingWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,11 +50,18 @@ export function useWings() {
     setLoading(true);
     setError(null);
 
-    // Fetch wings with bed counts
-    const { data: wingsData, error: wingsError } = await supabase
+    // Build query with optional facility filter
+    let query = supabase
       .from('wings')
       .select('*')
       .order('display_order');
+
+    // Filter by facility if provided
+    if (facilityId) {
+      query = query.eq('facility_id', facilityId);
+    }
+
+    const { data: wingsData, error: wingsError } = await query;
 
     if (wingsError) {
       setError(wingsError.message);
@@ -90,7 +102,7 @@ export function useWings() {
 
     setWings(wingsWithStats);
     setLoading(false);
-  }, []);
+  }, [facilityId]);
 
   useEffect(() => {
     fetchWings();

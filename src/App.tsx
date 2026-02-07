@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from './components';
-import { Dashboard, Residents, Admissions, Analytics, Login, Settings, Reports } from './pages';
+import { Admin, Dashboard, Residents, Admissions, Analytics, Login, Settings, Reports } from './pages';
 import { useAuth } from './hooks/useAuth';
 import { canAccessRoute } from './lib/permissions';
 import type { User } from './types';
@@ -35,7 +35,17 @@ function ProtectedRoute({
 }
 
 function AuthenticatedRoutes() {
-  const { user, profile, loading, signIn, signUp, signOut } = useAuth();
+  const {
+    user,
+    profile,
+    loading,
+    currentFacility,
+    accessibleFacilities,
+    setCurrentFacility,
+    signIn,
+    signUp,
+    signOut,
+  } = useAuth();
 
   if (loading) {
     return (
@@ -51,7 +61,18 @@ function AuthenticatedRoutes() {
 
   return (
     <Routes>
-      <Route element={<AppLayout user={user} onSignOut={signOut} />}>
+      <Route
+        element={
+          <AppLayout
+            user={user}
+            profile={profile}
+            currentFacility={currentFacility}
+            accessibleFacilities={accessibleFacilities}
+            onFacilityChange={setCurrentFacility}
+            onSignOut={signOut}
+          />
+        }
+      >
         <Route path="/" element={<Navigate to="/analytics" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/residents" element={<Residents />} />
@@ -63,6 +84,14 @@ function AuthenticatedRoutes() {
           element={
             <ProtectedRoute route="/settings" profile={profile}>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute route="/admin" profile={profile}>
+              <Admin />
             </ProtectedRoute>
           }
         />

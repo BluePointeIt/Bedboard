@@ -15,11 +15,13 @@ export function Login({ onLogin, onSignUp }: LoginProps) {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [signUpSuccess, setSignUpSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSignUpSuccess(false);
 
     try {
       let result;
@@ -31,6 +33,9 @@ export function Login({ onLogin, onSignUp }: LoginProps) {
 
       if (result.error) {
         setError(result.error.message);
+      } else if (isSignUp) {
+        // Signup successful - show confirmation message
+        setSignUpSuccess(true);
       }
     } catch {
       setError('An unexpected error occurred');
@@ -178,6 +183,17 @@ export function Login({ onLogin, onSignUp }: LoginProps) {
               </div>
             )}
 
+            {/* Sign Up Success Message */}
+            {signUpSuccess && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-lg flex items-start gap-3">
+                <Icon name="check_circle" size={20} className="mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">Sign up successful!</p>
+                  <p className="mt-1">Please check your email and click the confirmation link to activate your account.</p>
+                </div>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -206,6 +222,7 @@ export function Login({ onLogin, onSignUp }: LoginProps) {
                 onClick={() => {
                   setIsSignUp(!isSignUp);
                   setError('');
+                  setSignUpSuccess(false);
                 }}
                 className="text-sm font-medium text-slate-600 hover:text-primary-500 transition-colors"
               >

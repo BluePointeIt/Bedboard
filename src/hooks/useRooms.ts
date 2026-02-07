@@ -7,6 +7,11 @@ const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.
 // Generate unique channel ID for each hook instance
 let roomsChannelCounter = 0;
 
+export interface UseRoomsOptions {
+  wingId?: string;
+  facilityId?: string | null;
+}
+
 export interface CreateRoomInput {
   wing_id: string;
   room_number: string;
@@ -25,7 +30,13 @@ export interface BathroomGroup {
   rooms: Room[];
 }
 
-export function useRooms(wingId?: string) {
+export function useRooms(wingIdOrOptions?: string | UseRoomsOptions) {
+  // Support both old API (wingId string) and new API (options object)
+  const options = typeof wingIdOrOptions === 'string'
+    ? { wingId: wingIdOrOptions }
+    : wingIdOrOptions || {};
+  const { wingId, facilityId } = options;
+
   const [rooms, setRooms] = useState<RoomWithBeds[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +61,11 @@ export function useRooms(wingId?: string) {
 
     if (wingId) {
       query = query.eq('wing_id', wingId);
+    }
+
+    // Filter by facility via wing relationship
+    if (facilityId) {
+      query = query.eq('wing.facility_id', facilityId);
     }
 
     const { data: roomsData, error: roomsError } = await query;
@@ -106,7 +122,7 @@ export function useRooms(wingId?: string) {
 
     setRooms(roomsWithBeds);
     setLoading(false);
-  }, [wingId]);
+  }, [wingId, facilityId]);
 
   useEffect(() => {
     if (!supabaseConfigured) {

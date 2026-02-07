@@ -7,6 +7,10 @@ const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.
 // Generate unique channel ID for each hook instance
 let residentsChannelCounter = 0;
 
+export interface UseResidentsOptions {
+  facilityId?: string | null;
+}
+
 export interface CreateResidentInput {
   first_name: string;
   last_name: string;
@@ -20,6 +24,7 @@ export interface CreateResidentInput {
   isolation_type?: IsolationType;
   notes?: string;
   bed_id?: string;
+  facility_id?: string;
 }
 
 export interface UpdateResidentInput {
@@ -40,7 +45,8 @@ export interface UpdateResidentInput {
   bed_id?: string | null;
 }
 
-export function useResidents() {
+export function useResidents(options?: UseResidentsOptions) {
+  const facilityId = options?.facilityId;
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +59,20 @@ export function useResidents() {
     }
 
     setLoading(true);
-    const { data, error: fetchError } = await supabase
+
+    // Build query with optional facility filter
+    let query = supabase
       .from('residents')
       .select('*')
       .order('last_name')
       .order('first_name');
+
+    // Filter by facility if provided
+    if (facilityId) {
+      query = query.eq('facility_id', facilityId);
+    }
+
+    const { data, error: fetchError } = await query;
 
     if (fetchError) {
       setError(fetchError.message);
@@ -66,7 +81,7 @@ export function useResidents() {
     }
 
     setLoading(false);
-  }, []);
+  }, [facilityId]);
 
   useEffect(() => {
     fetchResidents();
@@ -100,6 +115,7 @@ export function useResidents() {
         ...resident,
         is_isolation: resident.is_isolation || false,
         status: 'active',
+        facility_id: facilityId || resident.facility_id,
       })
       .select()
       .single();

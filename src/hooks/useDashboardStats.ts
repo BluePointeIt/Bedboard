@@ -7,10 +7,15 @@ const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.
 // Generate unique channel ID for each hook instance
 let statsChannelCounter = 0;
 
+export interface UseDashboardStatsOptions {
+  wingId?: string | null;
+  facilityId?: string | null;
+}
+
 interface BedWithRoom {
   id: string;
   status: string;
-  room: { wing_id: string };
+  room: { wing_id: string; wing?: { facility_id?: string } };
 }
 
 interface ResidentWithBed {
@@ -48,7 +53,12 @@ function isResidentWithBed(data: unknown): data is ResidentWithBed {
   return typeof room.wing_id === 'string';
 }
 
-export function useDashboardStats(wingId?: string | null) {
+export function useDashboardStats(options?: string | null | UseDashboardStatsOptions) {
+  // Support both old API (wingId string) and new API (options object)
+  const { wingId, facilityId } = typeof options === 'string' || options === null
+    ? { wingId: options, facilityId: undefined }
+    : options || {};
+
   const [stats, setStats] = useState<DashboardStats>({
     total_beds: 0,
     occupied_beds: 0,
@@ -71,16 +81,26 @@ export function useDashboardStats(wingId?: string | null) {
 
     setError(null);
 
-    // Fetch beds with room info
-    const { data: bedsData, error: bedsError } = await supabase
+    // Build query with optional facility filter
+    let query = supabase
       .from('beds')
       .select(`
         id,
         status,
         room:rooms!inner(
-          wing_id
+          wing_id,
+          wing:wings!inner(
+            facility_id
+          )
         )
       `);
+
+    // Filter by facility via wing relationship
+    if (facilityId) {
+      query = query.eq('room.wing.facility_id', facilityId);
+    }
+
+    const { data: bedsData, error: bedsError } = await query;
 
     if (bedsError) {
       setError(bedsError.message);
@@ -153,7 +173,7 @@ export function useDashboardStats(wingId?: string | null) {
     });
 
     setLoading(false);
-  }, [wingId]);
+  }, [wingId, facilityId]);
 
   useEffect(() => {
     fetchStats();

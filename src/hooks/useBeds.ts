@@ -11,6 +11,10 @@ import {
 
 const supabaseConfigured = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+export interface UseBedsOptions extends FilterOptions {
+  facilityId?: string | null;
+}
+
 /**
  * Type definitions for Supabase nested relation responses.
  * Supabase returns nested relations as objects, but TypeScript can't infer the structure.
@@ -121,7 +125,8 @@ export interface GenderCompatibilityResult {
 // Generate unique channel ID for each hook instance
 let bedsChannelCounter = 0;
 
-export function useBeds(filters?: FilterOptions) {
+export function useBeds(filters?: FilterOptions | UseBedsOptions) {
+  const facilityId = (filters as UseBedsOptions)?.facilityId;
   const [beds, setBeds] = useState<BedWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -136,8 +141,8 @@ export function useBeds(filters?: FilterOptions) {
     setLoading(true);
     setError(null);
 
-    // Fetch beds with room, wing, and resident data
-    const { data: bedsData, error: bedsError } = await supabase
+    // Build query with facility filter via wing relationship
+    let query = supabase
       .from('beds')
       .select(`
         *,
@@ -148,6 +153,13 @@ export function useBeds(filters?: FilterOptions) {
       `)
       .order('room_id')
       .order('bed_letter');
+
+    // Filter by facility via wing relationship
+    if (facilityId) {
+      query = query.eq('room.wing.facility_id', facilityId);
+    }
+
+    const { data: bedsData, error: bedsError } = await query;
 
     if (bedsError) {
       setError(bedsError.message);
@@ -218,7 +230,7 @@ export function useBeds(filters?: FilterOptions) {
 
     setBeds(combinedData);
     setLoading(false);
-  }, [filters?.wing_id, filters?.status, filters?.search]);
+  }, [filters?.wing_id, filters?.status, filters?.search, facilityId]);
 
   useEffect(() => {
     if (!supabaseConfigured) {

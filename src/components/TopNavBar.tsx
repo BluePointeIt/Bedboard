@@ -2,15 +2,31 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { Icon } from './Icon';
+import { FacilitySwitcher } from './FacilitySwitcher';
+import { getRoleDisplayName, canSwitchFacility, hasPermission } from '../lib/permissions';
+import type { User, Company } from '../types';
 
 interface TopNavBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   user?: SupabaseUser | null;
+  profile?: User | null;
+  currentFacility?: Company | null;
+  accessibleFacilities?: Company[];
+  onFacilityChange?: (facility: Company) => void;
   onSignOut?: () => Promise<{ error: Error | null }>;
 }
 
-export function TopNavBar({ searchQuery, onSearchChange, user, onSignOut }: TopNavBarProps) {
+export function TopNavBar({
+  searchQuery,
+  onSearchChange,
+  user,
+  profile,
+  currentFacility,
+  accessibleFacilities = [],
+  onFacilityChange,
+  onSignOut,
+}: TopNavBarProps) {
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -19,14 +35,21 @@ export function TopNavBar({ searchQuery, onSearchChange, user, onSignOut }: TopN
   const notificationsRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
 
-  const navItems = [
-    { path: '/analytics', label: 'Analytics' },
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/residents', label: 'Residents' },
-    { path: '/admissions', label: 'Admissions' },
-    { path: '/reports', label: 'Reports' },
-    { path: '/settings', label: 'Settings' },
+  // Define nav items with permission requirements
+  const allNavItems = [
+    { path: '/analytics', label: 'Analytics', permission: 'view:analytics' as const },
+    { path: '/dashboard', label: 'Dashboard', permission: 'view:dashboard' as const },
+    { path: '/residents', label: 'Residents', permission: 'view:residents' as const },
+    { path: '/admissions', label: 'Admissions', permission: 'create:resident' as const },
+    { path: '/reports', label: 'Reports', permission: 'view:reports' as const },
+    { path: '/settings', label: 'Settings', permission: 'view:settings' as const },
+    { path: '/admin', label: 'Admin', permission: 'manage:users' as const },
   ];
+
+  // Filter nav items based on user permissions
+  const navItems = allNavItems.filter(
+    (item) => !profile || hasPermission(profile, item.permission)
+  );
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -54,7 +77,10 @@ export function TopNavBar({ searchQuery, onSearchChange, user, onSignOut }: TopN
   };
 
   const userEmail = user?.email || 'User';
-  const userInitials = userEmail.charAt(0).toUpperCase();
+  const userFullName = profile?.full_name || userEmail;
+  const userInitials = userFullName.charAt(0).toUpperCase();
+  const userRoleDisplay = profile ? getRoleDisplayName(profile.role) : 'User';
+  const showFacilitySwitcher = profile && canSwitchFacility(profile) && onFacilityChange;
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-solid border-[#e7edf3] bg-white z-20" style={{ paddingLeft: '24px', paddingRight: '24px' }}>
@@ -98,6 +124,14 @@ export function TopNavBar({ searchQuery, onSearchChange, user, onSignOut }: TopN
         </nav>
       </div>
       <div className="flex items-center gap-6">
+        {/* Facility Switcher - Only shown for regional/superuser */}
+        {showFacilitySwitcher && currentFacility && (
+          <FacilitySwitcher
+            currentFacility={currentFacility}
+            accessibleFacilities={accessibleFacilities}
+            onFacilityChange={onFacilityChange}
+          />
+        )}
         <label className="flex flex-col min-w-64 h-10">
           <div className="flex w-full items-stretch rounded-lg bg-[#e7edf3] h-full">
             <div className="flex items-center justify-center pl-4 text-[#4c739a]">
@@ -193,8 +227,13 @@ export function TopNavBar({ searchQuery, onSearchChange, user, onSignOut }: TopN
           {showUserMenu && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-[#e7edf3] py-2 z-50">
               <div className="px-4 py-3 border-b border-[#e7edf3]">
-                <p className="font-semibold text-[#0d141b] truncate">{userEmail}</p>
-                <p className="text-xs text-[#4c739a]">Administrator</p>
+                <p className="font-semibold text-[#0d141b] truncate">{userFullName}</p>
+                <p className="text-xs text-[#4c739a]">{userRoleDisplay}</p>
+                {currentFacility && (
+                  <p className="text-xs text-[#4c739a] mt-1">
+                    {currentFacility.name} ({currentFacility.facility_code})
+                  </p>
+                )}
               </div>
               <div className="py-1">
                 <Link

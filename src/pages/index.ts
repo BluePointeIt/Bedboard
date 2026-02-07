@@ -1,3 +1,4 @@
+export { Admin } from './Admin';
 export { Dashboard } from './Dashboard';
 export { Residents } from './Residents';
 export { Admissions } from './Admissions';
