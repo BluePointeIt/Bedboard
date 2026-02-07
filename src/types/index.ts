@@ -6,6 +6,7 @@ export interface Company {
   organization_code?: string;
   address?: string;
   phone?: string;
+  total_beds?: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -102,6 +103,7 @@ export interface User {
   email: string;
   full_name: string;
   role: UserRole;
+  organization_code?: string;
   primary_facility_id?: string;
   is_active: boolean;
   created_at: string;

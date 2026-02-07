@@ -94,7 +94,7 @@ Deno.serve(async (req: Request) => {
 
     // Parse request body
     const body = await req.json();
-    const { email, password, full_name, role, primary_facility_id, assigned_facilities } = body;
+    const { email, password, full_name, role, organization_code, primary_facility_id, assigned_facilities } = body;
 
     // Validate required fields
     if (!email || !password || !full_name || !role) {
@@ -154,6 +154,7 @@ Deno.serve(async (req: Request) => {
       .update({
         full_name,
         role,
+        organization_code: organization_code || null,
         primary_facility_id: primary_facility_id || null,
         is_active: true,
       })

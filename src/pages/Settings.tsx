@@ -54,13 +54,20 @@ export function Settings() {
   const [budgetSaved, setBudgetSaved] = useState(false);
   const [budgetLoading, setBudgetLoading] = useState(true);
 
-  const { wings, loading: wingsLoading, updateWing, refetch: refetchWings } = useWings({ facilityId: currentFacility?.id });
+  const { wings, loading: wingsLoading, createWing, updateWing, deleteWing, refetch: refetchWings } = useWings({ facilityId: currentFacility?.id });
   const { rooms, loading: roomsLoading, refetch: refetchRooms } = useRooms({ facilityId: currentFacility?.id });
   const { createRoom, updateRoom, deleteRoom, getBathroomGroupsForWing } = useRoomActions();
   const { createBed, deleteBed, getNextAvailableBedLetter } = useBedActions();
 
   // Expanded wings state
   const [expandedWings, setExpandedWings] = useState<Set<string>>(new Set());
+
+  // Add wing modal state
+  const [showAddWingModal, setShowAddWingModal] = useState(false);
+  const [addWingForm, setAddWingForm] = useState({
+    name: '',
+    wing_type: 'rehab' as WingType,
+  });
 
   // Edit wing modal state
   const [showEditWingModal, setShowEditWingModal] = useState(false);
@@ -69,6 +76,10 @@ export function Settings() {
     name: '',
     wing_type: 'rehab' as WingType,
   });
+
+  // Delete wing confirmation state
+  const [showDeleteWingConfirmModal, setShowDeleteWingConfirmModal] = useState(false);
+  const [wingToDelete, setWingToDelete] = useState<WingWithStats | null>(null);
 
   // Add room modal state
   const [showAddRoomModal, setShowAddRoomModal] = useState(false);
@@ -431,6 +442,66 @@ export function Settings() {
     refetchWings();
   };
 
+  // Wing add handlers
+  const handleAddWingClick = () => {
+    setAddWingForm({
+      name: '',
+      wing_type: 'rehab',
+    });
+    setActionError(null);
+    setShowAddWingModal(true);
+  };
+
+  const handleSaveNewWing = async () => {
+    if (!currentFacility?.id || !addWingForm.name.trim()) return;
+
+    setSaving(true);
+    setActionError(null);
+
+    const { error } = await createWing({
+      name: addWingForm.name.trim(),
+      wing_type: addWingForm.wing_type,
+      facility_id: currentFacility.id,
+    });
+
+    if (error) {
+      setActionError(error.message);
+      setSaving(false);
+      return;
+    }
+
+    setSaving(false);
+    setShowAddWingModal(false);
+    refetchWings();
+  };
+
+  // Wing delete handlers
+  const handleDeleteWingClick = (wing: WingWithStats) => {
+    setWingToDelete(wing);
+    setActionError(null);
+    setShowDeleteWingConfirmModal(true);
+  };
+
+  const handleConfirmDeleteWing = async () => {
+    if (!wingToDelete) return;
+
+    setSaving(true);
+    setActionError(null);
+
+    const { error } = await deleteWing(wingToDelete.id);
+
+    if (error) {
+      setActionError(error.message);
+      setSaving(false);
+      return;
+    }
+
+    setSaving(false);
+    setShowDeleteWingConfirmModal(false);
+    setWingToDelete(null);
+    refetchWings();
+  };
+
   // Room add handlers
   const handleAddRoomClick = async (wingId: string) => {
     setAddRoomWingId(wingId);
@@ -714,7 +785,14 @@ export function Settings() {
             </label>
             <div className="h-12 px-4 flex items-center border border-slate-200 rounded-lg bg-slate-50">
               <span className="text-2xl font-bold text-primary-500">{totalBeds}</span>
-              <span className="text-sm text-slate-500 ml-2">beds across {wings.length} wings</span>
+              <span className="text-sm text-slate-500 ml-2">
+                beds across {wings.length} wings
+                {currentFacility?.total_beds && currentFacility.total_beds > 0 && (
+                  <span className="ml-2">
+                    (budgeted: <span className="font-semibold">{currentFacility.total_beds}</span>)
+                  </span>
+                )}
+              </span>
             </div>
           </div>
         </div>
@@ -871,10 +949,16 @@ export function Settings() {
               <p className="text-sm text-slate-500">Manage wings, rooms, and beds</p>
             </div>
           </div>
-          <Button variant="secondary" onClick={() => setShowImportModal(true)}>
-            <Icon name="upload_file" size={16} className="mr-2" />
-            Import Rooms
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+              <Icon name="upload_file" size={16} className="mr-2" />
+              Import Rooms
+            </Button>
+            <Button onClick={handleAddWingClick}>
+              <Icon name="add" size={16} className="mr-2" />
+              Add Wing
+            </Button>
+          </div>
         </div>
 
         {loading ? (
@@ -932,6 +1016,16 @@ export function Settings() {
                         title="Edit wing"
                       >
                         <Icon name="edit" size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteWingClick(wing);
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                        title="Delete wing"
+                      >
+                        <Icon name="delete" size={16} />
                       </button>
                     </div>
                   </div>
@@ -1165,6 +1259,124 @@ export function Settings() {
               </Button>
               <Button onClick={handleSaveWing} loading={saving} disabled={!editWingForm.name.trim()}>
                 Save Changes
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Add Wing Modal */}
+      <Modal
+        isOpen={showAddWingModal}
+        onClose={() => {
+          setShowAddWingModal(false);
+          setActionError(null);
+        }}
+        title="Add Wing"
+        size="md"
+      >
+        <div className="space-y-4">
+          {actionError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {actionError}
+            </div>
+          )}
+
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="domain" size={16} className="text-slate-400" />
+              Wing Name
+            </label>
+            <input
+              type="text"
+              value={addWingForm.name}
+              onChange={(e) => setAddWingForm({ ...addWingForm, name: e.target.value })}
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+              placeholder="e.g., North Wing, East Wing"
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="category" size={16} className="text-slate-400" />
+              Wing Type
+            </label>
+            <select
+              value={addWingForm.wing_type}
+              onChange={(e) => setAddWingForm({ ...addWingForm, wing_type: e.target.value as WingType })}
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
+            >
+              {WING_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowAddWingModal(false);
+                setActionError(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveNewWing} loading={saving} disabled={!addWingForm.name.trim()}>
+              Add Wing
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Wing Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteWingConfirmModal}
+        onClose={() => {
+          setShowDeleteWingConfirmModal(false);
+          setWingToDelete(null);
+          setActionError(null);
+        }}
+        title="Delete Wing"
+        size="sm"
+      >
+        {wingToDelete && (
+          <div className="space-y-4">
+            {actionError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {actionError}
+              </div>
+            )}
+
+            <p className="text-slate-900">
+              Are you sure you want to delete <strong>{wingToDelete.name}</strong>?
+            </p>
+
+            {wingToDelete.total_beds > 0 && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                <Icon name="warning" size={16} className="inline mr-1" />
+                This wing has {wingToDelete.total_beds} beds. All rooms and beds will be deleted.
+                {wingToDelete.occupied_beds > 0 && (
+                  <span className="font-semibold"> {wingToDelete.occupied_beds} beds are currently occupied - residents will be unassigned.</span>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowDeleteWingConfirmModal(false);
+                  setWingToDelete(null);
+                  setActionError(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={handleConfirmDeleteWing} loading={saving}>
+                Delete Wing
               </Button>
             </div>
           </div>

@@ -12,6 +12,7 @@ export interface CreateUserInput {
   password: string;
   full_name: string;
   role: UserRole;
+  organization_code?: string;
   primary_facility_id?: string;
   assigned_facilities?: string[];
 }
@@ -19,6 +20,7 @@ export interface CreateUserInput {
 export interface UpdateUserInput {
   full_name?: string;
   role?: UserRole;
+  organization_code?: string;
   primary_facility_id?: string;
   assigned_facilities?: string[];
 }
@@ -75,6 +77,7 @@ export function useUsers(options?: UseUsersOptions) {
       email: user.email,
       full_name: user.full_name,
       role: user.role as UserRole,
+      organization_code: user.organization_code,
       primary_facility_id: user.primary_facility_id,
       is_active: user.is_active ?? true,
       created_at: user.created_at,

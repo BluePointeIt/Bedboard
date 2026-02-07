@@ -25,6 +25,12 @@ function isBedWithRoom(data: unknown): data is BedWithRoom {
   return typeof room.wing_id === 'string';
 }
 
+export interface CreateWingInput {
+  name: string;
+  wing_type: WingType;
+  facility_id: string;
+}
+
 export interface UpdateWingInput {
   name?: string;
   wing_type?: WingType;
@@ -253,5 +259,57 @@ export function useWings(options?: UseWingsOptions) {
     return { error, removed: bedsToRemove.length };
   }, [fetchWings]);
 
-  return { wings, loading, error, refetch: fetchWings, updateWing, addBedsToWing, removeBedsFromWing };
+  const createWing = useCallback(async (input: CreateWingInput) => {
+    if (!supabaseConfigured) {
+      return { error: new Error('Supabase not configured'), data: null };
+    }
+
+    // Get the max display_order for the facility
+    const { data: existingWings } = await supabase
+      .from('wings')
+      .select('display_order')
+      .eq('facility_id', input.facility_id)
+      .order('display_order', { ascending: false })
+      .limit(1);
+
+    const nextDisplayOrder = existingWings && existingWings.length > 0
+      ? (existingWings[0].display_order || 0) + 1
+      : 1;
+
+    const { data, error } = await supabase
+      .from('wings')
+      .insert({
+        name: input.name,
+        wing_type: input.wing_type,
+        facility_id: input.facility_id,
+        display_order: nextDisplayOrder,
+      })
+      .select()
+      .single();
+
+    if (!error) {
+      await fetchWings();
+    }
+
+    return { error, data };
+  }, [fetchWings]);
+
+  const deleteWing = useCallback(async (wingId: string) => {
+    if (!supabaseConfigured) {
+      return { error: new Error('Supabase not configured') };
+    }
+
+    const { error } = await supabase
+      .from('wings')
+      .delete()
+      .eq('id', wingId);
+
+    if (!error) {
+      await fetchWings();
+    }
+
+    return { error };
+  }, [fetchWings]);
+
+  return { wings, loading, error, refetch: fetchWings, createWing, updateWing, deleteWing, addBedsToWing, removeBedsFromWing };
 }

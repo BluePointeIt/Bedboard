@@ -13,6 +13,7 @@ export interface CreateFacilityInput {
   organization_code?: string;
   address?: string;
   phone?: string;
+  total_beds?: number;
 }
 
 export interface UpdateFacilityInput {
@@ -21,6 +22,7 @@ export interface UpdateFacilityInput {
   organization_code?: string;
   address?: string;
   phone?: string;
+  total_beds?: number;
 }
 
 export function useFacilities() {
@@ -86,6 +88,7 @@ export function useFacilities() {
         organization_code: input.organization_code?.toUpperCase() || input.facility_code.toUpperCase(),
         address: input.address || null,
         phone: input.phone || null,
+        total_beds: input.total_beds || 0,
         is_active: true,
       })
       .select()

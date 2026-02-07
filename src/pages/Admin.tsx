@@ -53,6 +53,7 @@ export function Admin() {
     password: '',
     full_name: '',
     role: 'user',
+    organization_code: '',
     primary_facility_id: '',
     assigned_facilities: [],
   });
@@ -62,6 +63,7 @@ export function Admin() {
   const [editUserForm, setEditUserForm] = useState({
     full_name: '',
     role: 'user' as UserRole,
+    organization_code: '',
     primary_facility_id: '',
     assigned_facilities: [] as string[],
   });
@@ -76,6 +78,7 @@ export function Admin() {
     organization_code: '',
     address: '',
     phone: '',
+    total_beds: 0,
   });
 
   const [showDisableConfirmModal, setShowDisableConfirmModal] = useState(false);
@@ -150,6 +153,7 @@ export function Admin() {
       password: '',
       full_name: '',
       role: 'user',
+      organization_code: '',
       primary_facility_id: defaultFacilityId,
       assigned_facilities: [],
     });
@@ -199,6 +203,7 @@ export function Admin() {
     setEditUserForm({
       full_name: user.full_name,
       role: user.role,
+      organization_code: user.organization_code || '',
       primary_facility_id: user.primary_facility_id || '',
       assigned_facilities: [],
     });
@@ -235,6 +240,9 @@ export function Admin() {
         return;
       }
       updates.role = editUserForm.role;
+    }
+    if (editUserForm.organization_code !== (selectedUser.organization_code || '')) {
+      updates.organization_code = editUserForm.organization_code || undefined;
     }
     if (editUserForm.primary_facility_id !== selectedUser.primary_facility_id) {
       updates.primary_facility_id = editUserForm.primary_facility_id || undefined;
@@ -285,6 +293,7 @@ export function Admin() {
       organization_code: '',
       address: '',
       phone: '',
+      total_beds: 0,
     });
     setActionError(null);
     setShowCreateFacilityModal(true);
@@ -298,6 +307,7 @@ export function Admin() {
       organization_code: facility.organization_code || '',
       address: facility.address || '',
       phone: facility.phone || '',
+      total_beds: facility.total_beds || 0,
     });
     setActionError(null);
     setShowEditFacilityModal(true);
@@ -356,6 +366,9 @@ export function Admin() {
     }
     if (facilityForm.phone !== (selectedFacility.phone || '')) {
       updates.phone = facilityForm.phone || undefined;
+    }
+    if (facilityForm.total_beds !== (selectedFacility.total_beds || 0)) {
+      updates.total_beds = facilityForm.total_beds;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -880,6 +893,23 @@ export function Admin() {
 
           <div>
             <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="domain" size={16} className="text-slate-400" />
+              Organization Code
+            </label>
+            <input
+              type="text"
+              value={createUserForm.organization_code || ''}
+              onChange={(e) =>
+                setCreateUserForm({ ...createUserForm, organization_code: e.target.value })
+              }
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+              placeholder="e.g., BLUEPOINT"
+            />
+            <p className="text-xs text-slate-500 mt-1">Optional: Used to group users by organization</p>
+          </div>
+
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
               <Icon name="business" size={16} className="text-slate-400" />
               Primary Facility
             </label>
@@ -1076,6 +1106,23 @@ export function Admin() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="domain" size={16} className="text-slate-400" />
+                Organization Code
+              </label>
+              <input
+                type="text"
+                value={editUserForm.organization_code || ''}
+                onChange={(e) =>
+                  setEditUserForm({ ...editUserForm, organization_code: e.target.value })
+                }
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+                placeholder="e.g., BLUEPOINT"
+              />
+              <p className="text-xs text-slate-500 mt-1">Optional: Used to group users by organization</p>
             </div>
 
             <div>
@@ -1304,6 +1351,22 @@ export function Admin() {
             />
           </div>
 
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="bed" size={16} className="text-slate-400" />
+              Total Beds
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={facilityForm.total_beds || 0}
+              onChange={(e) => setFacilityForm({ ...facilityForm, total_beds: parseInt(e.target.value) || 0 })}
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+              placeholder="e.g., 120"
+            />
+            <p className="text-xs text-slate-500 mt-1">Licensed or budgeted bed count for this facility</p>
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button
               variant="secondary"
@@ -1421,6 +1484,22 @@ export function Admin() {
                 className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
                 placeholder="e.g., (555) 123-4567"
               />
+            </div>
+
+            <div>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="bed" size={16} className="text-slate-400" />
+                Total Beds
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={facilityForm.total_beds || 0}
+                onChange={(e) => setFacilityForm({ ...facilityForm, total_beds: parseInt(e.target.value) || 0 })}
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+                placeholder="e.g., 120"
+              />
+              <p className="text-xs text-slate-500 mt-1">Licensed or budgeted bed count for this facility</p>
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
