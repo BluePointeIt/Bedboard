@@ -49,20 +49,29 @@ export function Analytics() {
   // Load case-mix budget from Supabase
   useEffect(() => {
     async function loadCaseMix() {
+      if (!currentFacility?.id) {
+        setBudgetLoading(false);
+        return;
+      }
+
       setBudgetLoading(true);
       const { data, error } = await supabase
         .from('facility_settings')
         .select('setting_value')
+        .eq('facility_id', currentFacility.id)
         .eq('setting_key', 'case_mix')
         .single();
 
       if (!error && data?.setting_value) {
         setCaseMixBudget(data.setting_value as PayorRates);
+      } else {
+        // Reset to defaults for facility without settings
+        setCaseMixBudget(DEFAULT_PAYOR_RATES);
       }
       setBudgetLoading(false);
     }
     loadCaseMix();
-  }, []);
+  }, [currentFacility?.id]);
 
   // Calculate all analytics
   const analytics = useMemo(() => {

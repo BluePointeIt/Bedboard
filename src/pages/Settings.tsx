@@ -124,36 +124,51 @@ export function Settings() {
   // Load facility name from Supabase
   useEffect(() => {
     async function loadFacilityName() {
+      if (!currentFacility?.id) return;
+
       const { data, error } = await supabase
         .from('facility_settings')
         .select('setting_value')
+        .eq('facility_id', currentFacility.id)
         .eq('setting_key', 'facility_name')
         .single();
 
       if (!error && data?.setting_value) {
         setFacilityName(data.setting_value as string);
+      } else {
+        // Use facility name from company record as default
+        setFacilityName(currentFacility.name);
       }
     }
     loadFacilityName();
-  }, []);
+  }, [currentFacility?.id, currentFacility?.name]);
 
   // Load case-mix settings from Supabase
   useEffect(() => {
     async function loadCaseMix() {
+      if (!currentFacility?.id) {
+        setBudgetLoading(false);
+        return;
+      }
+
       setBudgetLoading(true);
       const { data, error } = await supabase
         .from('facility_settings')
         .select('setting_value')
+        .eq('facility_id', currentFacility.id)
         .eq('setting_key', 'case_mix')
         .single();
 
       if (!error && data?.setting_value) {
         setPayorRates(data.setting_value as PayorRates);
+      } else {
+        // Reset to defaults for new facility
+        setPayorRates(DEFAULT_PAYOR_RATES);
       }
       setBudgetLoading(false);
     }
     loadCaseMix();
-  }, []);
+  }, [currentFacility?.id]);
 
   // Group rooms by wing
   const roomsByWing = rooms.reduce((acc, room) => {
@@ -173,13 +188,16 @@ export function Settings() {
   const calculatedOccupancyTarget = totalBeds > 0 ? Math.round((caseMixTotal / totalBeds) * 100) : 0;
 
   const handleSaveFacility = async () => {
+    if (!currentFacility?.id) return;
+
     const { error } = await supabase
       .from('facility_settings')
       .upsert({
+        facility_id: currentFacility.id,
         setting_key: 'facility_name',
         setting_value: facilityName,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'setting_key' });
+      }, { onConflict: 'facility_id,setting_key' });
 
     if (!error) {
       setSaved(true);
@@ -188,13 +206,16 @@ export function Settings() {
   };
 
   const handleSaveBudget = async () => {
+    if (!currentFacility?.id) return;
+
     const { error } = await supabase
       .from('facility_settings')
       .upsert({
+        facility_id: currentFacility.id,
         setting_key: 'case_mix',
         setting_value: payorRates,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'setting_key' });
+      }, { onConflict: 'facility_id,setting_key' });
 
     if (!error) {
       setBudgetSaved(true);
