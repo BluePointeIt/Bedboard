@@ -99,7 +99,7 @@ export function useAuth() {
         .maybeSingle();
 
       if (error) {
-        console.warn('Could not fetch user profile:', error.message);
+        console.error('Could not fetch user profile:', error.message, error);
         return;
       }
 
@@ -144,7 +144,10 @@ export function useAuth() {
           .eq('is_active', true)
           .order('name');
 
-        if (!error && data) {
+        if (error) {
+          console.error('Superuser facilities fetch error:', error);
+        }
+        if (data) {
           facilities = data;
         }
       } else if (role === 'regional') {

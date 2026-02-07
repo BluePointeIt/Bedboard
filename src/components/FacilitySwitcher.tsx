@@ -16,11 +16,6 @@ export function FacilitySwitcher({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Don't render if user only has access to one facility
-  if (accessibleFacilities.length <= 1) {
-    return null;
-  }
-
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -32,6 +27,11 @@ export function FacilitySwitcher({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Don't render if user only has access to one facility
+  if (accessibleFacilities.length <= 1) {
+    return null;
+  }
 
   const handleSelect = (facility: Company) => {
     onFacilityChange(facility);
