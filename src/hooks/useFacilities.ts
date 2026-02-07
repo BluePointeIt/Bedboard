@@ -10,6 +10,7 @@ let channelCounter = 0;
 export interface CreateFacilityInput {
   name: string;
   facility_code: string;
+  organization_code?: string;
   address?: string;
   phone?: string;
 }
@@ -17,6 +18,7 @@ export interface CreateFacilityInput {
 export interface UpdateFacilityInput {
   name?: string;
   facility_code?: string;
+  organization_code?: string;
   address?: string;
   phone?: string;
 }
@@ -81,6 +83,7 @@ export function useFacilities() {
       .insert({
         name: input.name,
         facility_code: input.facility_code.toUpperCase(),
+        organization_code: input.organization_code?.toUpperCase() || input.facility_code.toUpperCase(),
         address: input.address || null,
         phone: input.phone || null,
         is_active: true,
@@ -103,6 +106,9 @@ export function useFacilities() {
     const updateData: Record<string, unknown> = { ...updates };
     if (updates.facility_code) {
       updateData.facility_code = updates.facility_code.toUpperCase();
+    }
+    if (updates.organization_code) {
+      updateData.organization_code = updates.organization_code.toUpperCase();
     }
 
     const { error } = await supabase

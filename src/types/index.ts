@@ -3,6 +3,7 @@ export interface Company {
   id: string;
   name: string;
   facility_code: string;
+  organization_code?: string;
   address?: string;
   phone?: string;
   is_active: boolean;

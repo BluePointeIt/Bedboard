@@ -24,7 +24,7 @@ export function Admin() {
     return accessibleFacilities.map((f) => f.id);
   }, [profile, accessibleFacilities]);
 
-  const { users, loading: usersLoading, createUser, updateUser, toggleUserStatus, refetch: refetchUsers } = useUsers({
+  const { users, loading: usersLoading, createUser, updateUser, toggleUserStatus, getUserFacilities, refetch: refetchUsers } = useUsers({
     facilityIds: accessibleFacilityIds,
   });
   const {
@@ -54,6 +54,7 @@ export function Admin() {
     full_name: '',
     role: 'user',
     primary_facility_id: '',
+    assigned_facilities: [],
   });
 
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -62,7 +63,9 @@ export function Admin() {
     full_name: '',
     role: 'user' as UserRole,
     primary_facility_id: '',
+    assigned_facilities: [] as string[],
   });
+  const [loadingUserFacilities, setLoadingUserFacilities] = useState(false);
 
   const [showCreateFacilityModal, setShowCreateFacilityModal] = useState(false);
   const [showEditFacilityModal, setShowEditFacilityModal] = useState(false);
@@ -70,6 +73,7 @@ export function Admin() {
   const [facilityForm, setFacilityForm] = useState<CreateFacilityInput>({
     name: '',
     facility_code: '',
+    organization_code: '',
     address: '',
     phone: '',
   });
@@ -147,6 +151,7 @@ export function Admin() {
       full_name: '',
       role: 'user',
       primary_facility_id: defaultFacilityId,
+      assigned_facilities: [],
     });
     setActionError(null);
     setShowCreateUserModal(true);
@@ -185,7 +190,7 @@ export function Admin() {
     refetchUsers();
   };
 
-  const handleEditUserClick = (user: UserWithFacility) => {
+  const handleEditUserClick = async (user: UserWithFacility) => {
     if (!profile || !canManageUser(profile, user)) {
       setActionError('You do not have permission to edit this user');
       return;
@@ -195,9 +200,21 @@ export function Admin() {
       full_name: user.full_name,
       role: user.role,
       primary_facility_id: user.primary_facility_id || '',
+      assigned_facilities: [],
     });
     setActionError(null);
     setShowEditUserModal(true);
+
+    // Fetch user's assigned facilities if they are a regional user
+    if (user.role === 'regional') {
+      setLoadingUserFacilities(true);
+      const { data } = await getUserFacilities(user.id);
+      setEditUserForm((prev) => ({
+        ...prev,
+        assigned_facilities: data,
+      }));
+      setLoadingUserFacilities(false);
+    }
   };
 
   const handleSaveUser = async () => {
@@ -223,11 +240,12 @@ export function Admin() {
       updates.primary_facility_id = editUserForm.primary_facility_id || undefined;
     }
 
-    if (Object.keys(updates).length === 0) {
-      setShowEditUserModal(false);
-      setSelectedUser(null);
-      setSaving(false);
-      return;
+    // Include assigned facilities for regional users
+    if (editUserForm.role === 'regional') {
+      updates.assigned_facilities = editUserForm.assigned_facilities;
+    } else {
+      // Clear assigned facilities if role is not regional
+      updates.assigned_facilities = [];
     }
 
     const { error } = await updateUser(selectedUser.id, updates);
@@ -264,6 +282,7 @@ export function Admin() {
     setFacilityForm({
       name: '',
       facility_code: '',
+      organization_code: '',
       address: '',
       phone: '',
     });
@@ -276,6 +295,7 @@ export function Admin() {
     setFacilityForm({
       name: facility.name,
       facility_code: facility.facility_code,
+      organization_code: facility.organization_code || '',
       address: facility.address || '',
       phone: facility.phone || '',
     });
@@ -327,6 +347,9 @@ export function Admin() {
     }
     if (facilityForm.facility_code !== selectedFacility.facility_code) {
       updates.facility_code = facilityForm.facility_code;
+    }
+    if (facilityForm.organization_code !== (selectedFacility.organization_code || '')) {
+      updates.organization_code = facilityForm.organization_code || undefined;
     }
     if (facilityForm.address !== (selectedFacility.address || '')) {
       updates.address = facilityForm.address || undefined;
@@ -836,9 +859,15 @@ export function Admin() {
             </label>
             <select
               value={createUserForm.role}
-              onChange={(e) =>
-                setCreateUserForm({ ...createUserForm, role: e.target.value as UserRole })
-              }
+              onChange={(e) => {
+                const newRole = e.target.value as UserRole;
+                setCreateUserForm({
+                  ...createUserForm,
+                  role: newRole,
+                  // Clear assigned facilities if changing away from regional
+                  assigned_facilities: newRole === 'regional' ? createUserForm.assigned_facilities : [],
+                });
+              }}
               className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 bg-white"
             >
               {(profile?.role === 'superuser' ? ROLE_HIERARCHY : assignableRoles).map((role) => (
@@ -873,6 +902,87 @@ export function Admin() {
               <p className="text-xs text-slate-500 mt-1">Users will be assigned to your facility</p>
             )}
           </div>
+
+          {/* Additional Facilities for Regional Users */}
+          {createUserForm.role === 'regional' && (
+            <div>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="domain_add" size={16} className="text-slate-400" />
+                Additional Facilities
+              </label>
+              <p className="text-xs text-slate-500 mb-3">
+                Select additional facilities within the same organization
+              </p>
+              <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto">
+                {(() => {
+                  const primaryFacility = selectableFacilities.find(
+                    (f) => f.id === createUserForm.primary_facility_id
+                  );
+                  const primaryOrgCode = primaryFacility?.organization_code;
+
+                  if (!primaryOrgCode) {
+                    return (
+                      <p className="px-4 py-3 text-sm text-slate-500 text-center">
+                        Select a primary facility first
+                      </p>
+                    );
+                  }
+
+                  const sameOrgFacilities = selectableFacilities.filter(
+                    (f) =>
+                      f.id !== createUserForm.primary_facility_id &&
+                      f.organization_code === primaryOrgCode
+                  );
+
+                  if (sameOrgFacilities.length === 0) {
+                    return (
+                      <p className="px-4 py-3 text-sm text-slate-500 text-center">
+                        No other facilities in this organization
+                      </p>
+                    );
+                  }
+
+                  return sameOrgFacilities.map((facility) => {
+                    const isSelected = createUserForm.assigned_facilities?.includes(facility.id);
+                    return (
+                      <label
+                        key={facility.id}
+                        className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-slate-100 last:border-b-0 ${
+                          isSelected ? 'bg-primary-50' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const current = createUserForm.assigned_facilities || [];
+                            if (e.target.checked) {
+                              setCreateUserForm({
+                                ...createUserForm,
+                                assigned_facilities: [...current, facility.id],
+                              });
+                            } else {
+                              setCreateUserForm({
+                                ...createUserForm,
+                                assigned_facilities: current.filter((id) => id !== facility.id),
+                              });
+                            }
+                          }}
+                          className="w-4 h-4 text-primary-500 border-slate-300 rounded focus:ring-primary-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-900 truncate">
+                            {facility.name}
+                          </p>
+                          <p className="text-xs text-slate-500">{facility.facility_code}</p>
+                        </div>
+                      </label>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button
@@ -949,9 +1059,15 @@ export function Admin() {
               </label>
               <select
                 value={editUserForm.role}
-                onChange={(e) =>
-                  setEditUserForm({ ...editUserForm, role: e.target.value as UserRole })
-                }
+                onChange={(e) => {
+                  const newRole = e.target.value as UserRole;
+                  setEditUserForm({
+                    ...editUserForm,
+                    role: newRole,
+                    // Clear assigned facilities if changing away from regional
+                    assigned_facilities: newRole === 'regional' ? editUserForm.assigned_facilities : [],
+                  });
+                }}
                 className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 bg-white"
               >
                 {getAvailableRolesForUser(selectedUser).map((role) => (
@@ -982,6 +1098,96 @@ export function Admin() {
                 ))}
               </select>
             </div>
+
+            {/* Additional Facilities for Regional Users */}
+            {editUserForm.role === 'regional' && (
+              <div>
+                <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                  <Icon name="domain_add" size={16} className="text-slate-400" />
+                  Additional Facilities
+                </label>
+                <p className="text-xs text-slate-500 mb-3">
+                  Select additional facilities within the same organization
+                </p>
+                {loadingUserFacilities ? (
+                  <div className="flex items-center justify-center py-4 border border-slate-200 rounded-lg">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500" />
+                    <span className="ml-2 text-sm text-slate-500">Loading facilities...</span>
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto">
+                    {(() => {
+                      // Get primary facility's organization code
+                      const primaryFacility = selectableFacilities.find(
+                        (f) => f.id === editUserForm.primary_facility_id
+                      );
+                      const primaryOrgCode = primaryFacility?.organization_code;
+
+                      if (!primaryOrgCode) {
+                        return (
+                          <p className="px-4 py-3 text-sm text-slate-500 text-center">
+                            Select a primary facility first
+                          </p>
+                        );
+                      }
+
+                      // Filter to only facilities with the same organization code
+                      const sameOrgFacilities = selectableFacilities.filter(
+                        (f) =>
+                          f.id !== editUserForm.primary_facility_id &&
+                          f.organization_code === primaryOrgCode
+                      );
+
+                      if (sameOrgFacilities.length === 0) {
+                        return (
+                          <p className="px-4 py-3 text-sm text-slate-500 text-center">
+                            No other facilities in this organization
+                          </p>
+                        );
+                      }
+
+                      return sameOrgFacilities.map((facility) => {
+                        const isSelected = editUserForm.assigned_facilities?.includes(facility.id);
+                        return (
+                          <label
+                            key={facility.id}
+                            className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-slate-100 last:border-b-0 ${
+                              isSelected ? 'bg-primary-50' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const current = editUserForm.assigned_facilities || [];
+                                if (e.target.checked) {
+                                  setEditUserForm({
+                                    ...editUserForm,
+                                    assigned_facilities: [...current, facility.id],
+                                  });
+                                } else {
+                                  setEditUserForm({
+                                    ...editUserForm,
+                                    assigned_facilities: current.filter((id) => id !== facility.id),
+                                  });
+                                }
+                              }}
+                              className="w-4 h-4 text-primary-500 border-slate-300 rounded focus:ring-primary-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-900 truncate">
+                                {facility.name}
+                              </p>
+                              <p className="text-xs text-slate-500">{facility.facility_code}</p>
+                            </div>
+                          </label>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
               <Button
@@ -1048,6 +1254,26 @@ export function Admin() {
               placeholder="e.g., SCC"
               maxLength={5}
             />
+          </div>
+
+          <div>
+            <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+              <Icon name="corporate_fare" size={16} className="text-slate-400" />
+              Organization Code
+            </label>
+            <input
+              type="text"
+              value={facilityForm.organization_code || ''}
+              onChange={(e) =>
+                setFacilityForm({ ...facilityForm, organization_code: e.target.value.toUpperCase() })
+              }
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-mono"
+              placeholder="e.g., ACME (groups related facilities)"
+              maxLength={10}
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Group facilities by organization. Defaults to facility code if empty.
+            </p>
           </div>
 
           <div>
@@ -1147,6 +1373,26 @@ export function Admin() {
                 placeholder="e.g., SCC"
                 maxLength={5}
               />
+            </div>
+
+            <div>
+              <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
+                <Icon name="corporate_fare" size={16} className="text-slate-400" />
+                Organization Code
+              </label>
+              <input
+                type="text"
+                value={facilityForm.organization_code || ''}
+                onChange={(e) =>
+                  setFacilityForm({ ...facilityForm, organization_code: e.target.value.toUpperCase() })
+                }
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all font-mono"
+                placeholder="e.g., ACME (groups related facilities)"
+                maxLength={10}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Group facilities by organization. Defaults to facility code if empty.
+              </p>
             </div>
 
             <div>

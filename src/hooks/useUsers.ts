@@ -20,6 +20,7 @@ export interface UpdateUserInput {
   full_name?: string;
   role?: UserRole;
   primary_facility_id?: string;
+  assigned_facilities?: string[];
 }
 
 export interface UseUsersOptions {
@@ -110,17 +111,70 @@ export function useUsers(options?: UseUsersOptions) {
       return { error: new Error('Supabase not configured') };
     }
 
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', userId);
+    // Extract assigned_facilities from updates
+    const { assigned_facilities, ...userUpdates } = updates;
 
-    if (!error) {
-      await fetchUsers();
+    // Update user record if there are user-level changes
+    if (Object.keys(userUpdates).length > 0) {
+      const { error } = await supabase
+        .from('users')
+        .update(userUpdates)
+        .eq('id', userId);
+
+      if (error) {
+        return { error };
+      }
     }
 
-    return { error };
+    // Update assigned facilities if provided
+    if (assigned_facilities !== undefined) {
+      // Delete existing facility assignments
+      const { error: deleteError } = await supabase
+        .from('user_facilities')
+        .delete()
+        .eq('user_id', userId);
+
+      if (deleteError) {
+        return { error: deleteError };
+      }
+
+      // Insert new facility assignments (excluding primary facility)
+      if (assigned_facilities.length > 0) {
+        const facilityEntries = assigned_facilities.map((facility_id) => ({
+          user_id: userId,
+          facility_id,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('user_facilities')
+          .insert(facilityEntries);
+
+        if (insertError) {
+          return { error: insertError };
+        }
+      }
+    }
+
+    await fetchUsers();
+    return { error: null };
   }, [fetchUsers]);
+
+  const getUserFacilities = useCallback(async (userId: string) => {
+    if (!supabaseConfigured) {
+      return { data: [], error: new Error('Supabase not configured') };
+    }
+
+    const { data, error } = await supabase
+      .from('user_facilities')
+      .select('facility_id')
+      .eq('user_id', userId);
+
+    if (error) {
+      return { data: [], error };
+    }
+
+    return { data: data.map((uf) => uf.facility_id), error: null };
+  }, []);
 
   const toggleUserStatus = useCallback(async (userId: string, isActive: boolean) => {
     if (!supabaseConfigured) {
@@ -186,5 +240,6 @@ export function useUsers(options?: UseUsersOptions) {
     createUser,
     updateUser,
     toggleUserStatus,
+    getUserFacilities,
   };
 }
