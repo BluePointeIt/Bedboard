@@ -108,6 +108,17 @@ export function Admin() {
     return facilities.filter((f) => accessibleFacilities.some((af) => af.id === f.id));
   }, [profile, facilities, accessibleFacilities]);
 
+  // Get unique organization codes from accessible facilities
+  const selectableOrganizationCodes = useMemo(() => {
+    const codes = new Set<string>();
+    selectableFacilities.forEach((f) => {
+      if (f.organization_code) {
+        codes.add(f.organization_code);
+      }
+    });
+    return Array.from(codes).sort();
+  }, [selectableFacilities]);
+
   // Filter users
   const filteredUsers = useMemo(() => {
     return users.filter((user) => {
@@ -896,15 +907,20 @@ export function Admin() {
               <Icon name="domain" size={16} className="text-slate-400" />
               Organization Code
             </label>
-            <input
-              type="text"
+            <select
               value={createUserForm.organization_code || ''}
               onChange={(e) =>
                 setCreateUserForm({ ...createUserForm, organization_code: e.target.value })
               }
-              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-              placeholder="e.g., BLUEPOINT"
-            />
+              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 bg-white"
+            >
+              <option value="">No organization</option>
+              {selectableOrganizationCodes.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
             <p className="text-xs text-slate-500 mt-1">Optional: Used to group users by organization</p>
           </div>
 
@@ -1113,15 +1129,20 @@ export function Admin() {
                 <Icon name="domain" size={16} className="text-slate-400" />
                 Organization Code
               </label>
-              <input
-                type="text"
+              <select
                 value={editUserForm.organization_code || ''}
                 onChange={(e) =>
                   setEditUserForm({ ...editUserForm, organization_code: e.target.value })
                 }
-                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-                placeholder="e.g., BLUEPOINT"
-              />
+                className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 bg-white"
+              >
+                <option value="">No organization</option>
+                {selectableOrganizationCodes.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
               <p className="text-xs text-slate-500 mt-1">Optional: Used to group users by organization</p>
             </div>
 
