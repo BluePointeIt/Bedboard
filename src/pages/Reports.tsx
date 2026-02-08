@@ -3,7 +3,6 @@ import { useOutletContext } from 'react-router-dom';
 import { Icon } from '../components';
 import { useBeds } from '../hooks/useBeds';
 import { useResidents } from '../hooks/useResidents';
-import { useAuth } from '../hooks/useAuth';
 import type { LayoutContext } from '../components/AppLayout';
 import {
   exportToExcel,
@@ -25,8 +24,7 @@ interface CustomReportField {
 }
 
 export function Reports() {
-  const { selectedWingId, wings } = useOutletContext<LayoutContext>();
-  const { currentFacility } = useAuth();
+  const { selectedWingId, wings, currentFacility } = useOutletContext<LayoutContext>();
   const [reportType, setReportType] = useState<ReportType>('census');
 
   // Date range filter for custom reports

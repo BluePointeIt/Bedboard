@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useResidents, type CreateResidentInput } from '../hooks/useResidents';
 import { useBeds, useBedActions } from '../hooks/useBeds';
-import { useAuth } from '../hooks/useAuth';
 import { Icon, Button, Modal, DiagnosisSelect, ResidentCard, SlideOverPanel, ResidentDetailSidebar } from '../components';
 import type { Resident, IsolationType, PayorType, Gender } from '../types';
+import type { LayoutContext } from '../components/AppLayout';
 import { getCompatibilityLabel, type BedCompatibilityScore } from '../lib/compatibilityUtils';
 import {
   validateDateOfBirth,
@@ -29,7 +30,7 @@ const ISOLATION_TYPES: { value: IsolationType; label: string }[] = [
 ];
 
 export function Residents() {
-  const { currentFacility } = useAuth();
+  const { currentFacility } = useOutletContext<LayoutContext>();
   const {
     activeResidents,
     dischargedResidents,

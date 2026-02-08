@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useResidents, type CreateResidentInput } from '../hooks/useResidents';
-import { useAuth } from '../hooks/useAuth';
 import { Button, Icon } from '../components';
+import type { LayoutContext } from '../components/AppLayout';
 
 export function Admissions() {
   const navigate = useNavigate();
-  const { currentFacility } = useAuth();
+  const { currentFacility } = useOutletContext<LayoutContext>();
   const { createResident } = useResidents({ facilityId: currentFacility?.id });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
