@@ -109,13 +109,19 @@ export function useResidents(options?: UseResidentsOptions) {
       return { data: null, error: new Error('Supabase not configured') };
     }
 
+    // Ensure facility_id is set - required for RLS
+    const residentFacilityId = resident.facility_id || facilityId;
+    if (!residentFacilityId) {
+      return { data: null, error: new Error('Facility ID is required to create a resident') };
+    }
+
     const { data, error } = await supabase
       .from('residents')
       .insert({
         ...resident,
         is_isolation: resident.is_isolation || false,
         status: 'active',
-        facility_id: facilityId || resident.facility_id,
+        facility_id: residentFacilityId,
       })
       .select()
       .single();
@@ -129,7 +135,7 @@ export function useResidents(options?: UseResidentsOptions) {
     }
 
     return { data, error };
-  }, []);
+  }, [facilityId]);
 
   const updateResident = useCallback(async (updates: UpdateResidentInput) => {
     if (!supabaseConfigured) {

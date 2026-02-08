@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useResidents, type CreateResidentInput } from '../hooks/useResidents';
 import { useBeds, useBedActions } from '../hooks/useBeds';
+import { useAuth } from '../hooks/useAuth';
 import { Icon, Button, Modal, DiagnosisSelect, ResidentCard, SlideOverPanel, ResidentDetailSidebar } from '../components';
 import type { Resident, IsolationType, PayorType, Gender } from '../types';
 import { getCompatibilityLabel, type BedCompatibilityScore } from '../lib/compatibilityUtils';
@@ -28,6 +29,7 @@ const ISOLATION_TYPES: { value: IsolationType; label: string }[] = [
 ];
 
 export function Residents() {
+  const { currentFacility } = useAuth();
   const {
     activeResidents,
     dischargedResidents,
@@ -37,9 +39,9 @@ export function Residents() {
     updateResident,
     dischargeResident,
     setIsolation,
-  } = useResidents();
+  } = useResidents({ facilityId: currentFacility?.id });
 
-  const { beds, refetch: refetchBeds } = useBeds();
+  const { beds, refetch: refetchBeds } = useBeds({ facilityId: currentFacility?.id });
   const { assignResident, unassignResident, getBedRecommendationsForNewResident } = useBedActions();
 
   const [showDischargedTab, setShowDischargedTab] = useState(false);

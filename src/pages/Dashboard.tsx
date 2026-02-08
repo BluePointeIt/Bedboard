@@ -58,7 +58,7 @@ const INITIAL_MOVE_STATE: MoveModalState = {
 };
 
 export function Dashboard() {
-  const { searchQuery, selectedWingId, wings } = useOutletContext<LayoutContext>();
+  const { searchQuery, selectedWingId, wings, currentFacility } = useOutletContext<LayoutContext>();
 
   // Consolidated modal state
   const [modalState, setModalState] = useState<ModalState>(INITIAL_MODAL_STATE);
@@ -76,6 +76,7 @@ export function Dashboard() {
   const { beds, loading, refetch: refetchBeds } = useBeds({
     wing_id: selectedWingId,
     search: searchQuery || undefined,
+    facilityId: currentFacility?.id,
   });
   const { residents: unassignedResidents } = useUnassignedResidents();
   const { updateBedStatus, assignResident, unassignResident, checkGenderCompatibility, getRequiredGenderForBed, getBedRecommendations, getMoveOptimizations } = useBedActions();
