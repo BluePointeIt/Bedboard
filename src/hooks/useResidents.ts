@@ -269,43 +269,55 @@ export function useResident(id: string | null) {
 // Separate counter for unassigned residents hook
 let unassignedChannelCounter = 0;
 
-export function useUnassignedResidents() {
+export interface UseUnassignedResidentsOptions {
+  facilityId?: string | null;
+}
+
+export function useUnassignedResidents(options?: UseUnassignedResidentsOptions) {
+  const facilityId = options?.facilityId;
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
   const channelIdRef = useRef(`unassigned-residents-${++unassignedChannelCounter}-${Date.now()}`);
 
-  useEffect(() => {
+  const fetchUnassignedResidents = useCallback(async () => {
     if (!supabaseConfigured) {
       setLoading(false);
       return;
     }
 
-    async function fetchUnassignedResidents() {
-      const { data } = await supabase
-        .from('residents')
-        .select('*')
-        .eq('status', 'active')
-        .is('bed_id', null)
-        .order('last_name')
-        .order('first_name');
+    let query = supabase
+      .from('residents')
+      .select('*')
+      .eq('status', 'active')
+      .is('bed_id', null)
+      .order('last_name')
+      .order('first_name');
 
-      setResidents(data || []);
-      setLoading(false);
+    if (facilityId) {
+      query = query.eq('facility_id', facilityId);
     }
 
+    const { data } = await query;
+    setResidents(data || []);
+    setLoading(false);
+  }, [facilityId]);
+
+  useEffect(() => {
     fetchUnassignedResidents();
 
-    const channel = supabase
-      .channel(channelIdRef.current)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'residents' }, () => {
-        fetchUnassignedResidents();
-      })
-      .subscribe();
+    if (supabaseConfigured) {
+      const channel = supabase
+        .channel(channelIdRef.current)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'residents' }, () => {
+          fetchUnassignedResidents();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [fetchUnassignedResidents]);
 
   return { residents, loading };
 }

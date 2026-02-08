@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { TopNavBar } from './TopNavBar';
@@ -25,6 +25,15 @@ export function AppLayout({
 }: AppLayoutProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedWingId, setSelectedWingId] = useState<string | null>(null);
+  const previousFacilityIdRef = useRef<string | null | undefined>(currentFacility?.id);
+
+  // Reset selected wing when facility changes
+  useEffect(() => {
+    if (previousFacilityIdRef.current !== currentFacility?.id) {
+      setSelectedWingId(null);
+      previousFacilityIdRef.current = currentFacility?.id;
+    }
+  }, [currentFacility?.id]);
 
   // Fetch wings filtered by current facility
   const { wings, loading } = useWings({ facilityId: currentFacility?.id });

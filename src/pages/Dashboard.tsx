@@ -78,7 +78,7 @@ export function Dashboard() {
     search: searchQuery || undefined,
     facilityId: currentFacility?.id,
   });
-  const { residents: unassignedResidents } = useUnassignedResidents();
+  const { residents: unassignedResidents } = useUnassignedResidents({ facilityId: currentFacility?.id });
   const { updateBedStatus, assignResident, unassignResident, checkGenderCompatibility, getRequiredGenderForBed, getBedRecommendations, getMoveOptimizations } = useBedActions();
 
   // Get the selected wing name for the header
