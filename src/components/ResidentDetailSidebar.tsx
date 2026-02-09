@@ -290,8 +290,8 @@ export function ResidentDetailSidebar({
               onClick={onTransfer}
               className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-primary-500 text-white font-bold text-sm shadow-lg shadow-primary-500/20 hover:bg-primary-600 transition-colors"
             >
-              <Icon name="swap_horiz" size={18} />
-              Transfer Bed
+              <Icon name={bedInfo ? "swap_horiz" : "bed"} size={18} />
+              {bedInfo ? 'Transfer Bed' : 'Assign Bed'}
             </button>
             <button
               onClick={onEditProfile}
