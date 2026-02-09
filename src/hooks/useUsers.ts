@@ -202,10 +202,11 @@ export function useUsers(options?: UseUsersOptions) {
     }
 
     try {
-      // Get current session for auth header
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        return { error: new Error('Not authenticated'), data: null };
+      // Refresh session to ensure we have a valid token
+      const { data: { session }, error: sessionError } = await supabase.auth.refreshSession();
+      if (sessionError || !session) {
+        console.error('Session refresh error:', sessionError);
+        return { error: new Error('Session expired. Please log in again.'), data: null };
       }
 
       // Call the edge function
@@ -225,13 +226,16 @@ export function useUsers(options?: UseUsersOptions) {
       const result = await response.json();
 
       if (!response.ok) {
-        return { error: new Error(result.error || 'Failed to create user'), data: null };
+        console.error('Create user error:', response.status, result);
+        return { error: new Error(result.error || `Failed to create user (${response.status})`), data: null };
       }
 
       await fetchUsers();
       return { error: null, data: result.user };
     } catch (err) {
-      return { error: err as Error, data: null };
+      console.error('Create user network error:', err);
+      const message = err instanceof Error ? err.message : 'Network error';
+      return { error: new Error(`Failed to create user: ${message}`), data: null };
     }
   }, [fetchUsers]);
 
