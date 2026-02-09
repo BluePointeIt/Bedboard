@@ -51,8 +51,6 @@ export function Settings() {
   const { currentFacility } = useOutletContext<LayoutContext>();
   const { profile } = useAuth();
   const canEditBudgetedBeds = isSuperuser(profile);
-  const [facilityName, setFacilityName] = useState('MediBed Pro Facility');
-  const [saved, setSaved] = useState(false);
 
   // Budget settings state
   const [payorRates, setPayorRates] = useState<PayorRates>(DEFAULT_PAYOR_RATES);
@@ -137,28 +135,6 @@ export function Settings() {
   const [importing, setImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
-  // Load facility name from Supabase
-  useEffect(() => {
-    async function loadFacilityName() {
-      if (!currentFacility?.id) return;
-
-      const { data, error } = await supabase
-        .from('facility_settings')
-        .select('setting_value')
-        .eq('facility_id', currentFacility.id)
-        .eq('setting_key', 'facility_name')
-        .single();
-
-      if (!error && data?.setting_value) {
-        setFacilityName(data.setting_value as string);
-      } else {
-        // Use facility name from company record as default
-        setFacilityName(currentFacility.name);
-      }
-    }
-    loadFacilityName();
-  }, [currentFacility?.id, currentFacility?.name]);
-
   // Load case-mix settings from Supabase
   useEffect(() => {
     async function loadCaseMix() {
@@ -202,24 +178,6 @@ export function Settings() {
   // Calculate case-mix total and derived occupancy target
   const caseMixTotal = Object.values(payorRates).reduce((sum, val) => sum + val, 0);
   const calculatedOccupancyTarget = totalBeds > 0 ? Math.round((caseMixTotal / totalBeds) * 100) : 0;
-
-  const handleSaveFacility = async () => {
-    if (!currentFacility?.id) return;
-
-    const { error } = await supabase
-      .from('facility_settings')
-      .upsert({
-        facility_id: currentFacility.id,
-        setting_key: 'facility_name',
-        setting_value: facilityName,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'facility_id,setting_key' });
-
-    if (!error) {
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    }
-  };
 
   const handleSaveBudget = async () => {
     if (!currentFacility?.id) return;
@@ -796,13 +754,10 @@ export function Settings() {
               <Icon name="business" size={16} className="text-slate-400" />
               Facility Name
             </label>
-            <input
-              type="text"
-              value={facilityName}
-              onChange={(e) => setFacilityName(e.target.value)}
-              placeholder="Enter facility name"
-              className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-            />
+            <div className="h-12 px-4 flex items-center border border-slate-200 rounded-lg bg-slate-50">
+              <span className="text-lg font-semibold text-slate-900">{currentFacility?.name || 'No facility selected'}</span>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">Facility name is managed in Admin → Facility Management</p>
           </div>
           <div>
             <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
@@ -824,12 +779,6 @@ export function Settings() {
           </div>
         </div>
 
-        <div className="mt-4 flex justify-end">
-          <Button onClick={handleSaveFacility}>
-            <Icon name="save" size={16} className="mr-2" />
-            {saved ? 'Saved!' : 'Save Facility Name'}
-          </Button>
-        </div>
       </div>
 
       {/* Budget Settings */}
