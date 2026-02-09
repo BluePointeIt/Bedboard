@@ -96,6 +96,8 @@ export function Residents() {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferBedId, setTransferBedId] = useState<string>('');
   const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferRecommendations, setTransferRecommendations] = useState<BedCompatibilityScore[]>([]);
+  const [transferRecsLoading, setTransferRecsLoading] = useState(false);
 
   // Bed recommendations state for new resident
   const [bedRecommendations, setBedRecommendations] = useState<BedCompatibilityScore[]>([]);
@@ -124,6 +126,25 @@ export function Residents() {
       setBedRecommendations([]);
     }
   }, [showAddModal, newResident.gender, newResident.is_isolation, newResident.date_of_birth, newResident.diagnosis]);
+
+  // Fetch bed recommendations when transfer/assign modal is open
+  useEffect(() => {
+    if (showTransferModal && selectedResident) {
+      setTransferRecsLoading(true);
+      getBedRecommendationsForNewResident({
+        gender: selectedResident.gender,
+        is_isolation: selectedResident.is_isolation ?? false,
+        date_of_birth: selectedResident.date_of_birth || undefined,
+        diagnosis: selectedResident.diagnosis || undefined,
+        first_name: selectedResident.first_name || undefined,
+        last_name: selectedResident.last_name || undefined,
+      })
+        .then(setTransferRecommendations)
+        .finally(() => setTransferRecsLoading(false));
+    } else {
+      setTransferRecommendations([]);
+    }
+  }, [showTransferModal, selectedResident?.id]);
 
   const residents = showDischargedTab ? dischargedResidents : activeResidents;
 
@@ -1152,19 +1173,141 @@ export function Residents() {
           <div>
             <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
               <Icon name="bed" size={16} className="text-slate-400" />
-              New Bed *
+              {selectedResident?.bed_id ? 'New Bed' : 'Assign to Bed'} *
             </label>
+
+            {/* Smart Recommendations */}
+            {transferRecsLoading ? (
+              <div className="flex items-center py-4">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500" />
+                <span className="ml-2 text-sm text-slate-500">Analyzing best bed options...</span>
+              </div>
+            ) : transferRecommendations.length > 0 ? (
+              <div className="space-y-2 mb-3">
+                <p className="text-xs text-slate-500 font-medium">Recommended Beds:</p>
+
+                {/* Top Recommendation */}
+                {transferRecommendations[0] && (
+                  <button
+                    type="button"
+                    onClick={() => setTransferBedId(transferRecommendations[0].bedId)}
+                    className={`w-full text-left p-3 rounded-lg border transition-all ${
+                      transferBedId === transferRecommendations[0].bedId
+                        ? 'bg-amber-100 border-amber-400 ring-2 ring-amber-300'
+                        : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 hover:border-amber-300'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                        <Icon name="star" size={18} className="text-amber-500" />
+                        <span className="font-semibold text-slate-900">
+                          Room {transferRecommendations[0].bedInfo.roomNumber}{transferRecommendations[0].bedInfo.bedLetter}
+                        </span>
+                        <span className="text-xs text-slate-500">- {transferRecommendations[0].bedInfo.wingName}</span>
+                      </div>
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
+                        {transferRecommendations[0].totalScore}% match
+                      </span>
+                    </div>
+                    {transferRecommendations[0].roommate ? (
+                      <div className="mt-2 text-sm text-slate-600">
+                        <span className="font-medium">Roommate:</span> {transferRecommendations[0].roommate.name}
+                        {transferRecommendations[0].roommate.age !== null && ` (${transferRecommendations[0].roommate.age}yo)`}
+                        {transferRecommendations[0].roommate.diagnosis && `, ${transferRecommendations[0].roommate.diagnosis}`}
+                      </div>
+                    ) : (
+                      <div className="mt-2 text-sm text-slate-600">
+                        <span className="font-medium">Empty room</span> - No roommate constraints
+                      </div>
+                    )}
+                    {transferRecommendations[0].warnings.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {transferRecommendations[0].warnings.map((warning, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded">
+                            <Icon name="warning" size={12} />
+                            {warning}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-2 flex gap-4 text-xs text-slate-500">
+                      <span>Age: {transferRecommendations[0].ageScore}%</span>
+                      <span>Diagnosis: {transferRecommendations[0].diagnosisScore}%</span>
+                    </div>
+                  </button>
+                )}
+
+                {/* Other Recommendations */}
+                {transferRecommendations.slice(1, 4).map((rec) => {
+                  const { color, icon } = getCompatibilityLabel(rec.totalScore);
+                  return (
+                    <button
+                      key={rec.bedId}
+                      type="button"
+                      onClick={() => setTransferBedId(rec.bedId)}
+                      className={`w-full text-left p-3 rounded-lg border transition-all ${
+                        transferBedId === rec.bedId
+                          ? 'bg-primary-50 border-primary-400 ring-2 ring-primary-300'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Icon
+                            name={icon}
+                            size={16}
+                            className={color === 'green' ? 'text-green-500' : color === 'yellow' ? 'text-yellow-500' : 'text-orange-500'}
+                          />
+                          <span className="font-medium text-slate-900">
+                            Room {rec.bedInfo.roomNumber}{rec.bedInfo.bedLetter}
+                          </span>
+                          <span className="text-xs text-slate-500">- {rec.bedInfo.wingName}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          color === 'green' ? 'bg-green-100 text-green-700' :
+                          color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-orange-100 text-orange-700'
+                        }`}>
+                          {rec.totalScore}%
+                        </span>
+                      </div>
+                      {rec.roommate ? (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Roommate: {rec.roommate.name}
+                          {rec.roommate.age !== null && ` (${rec.roommate.age}yo)`}
+                          {rec.roommate.diagnosis && ` - ${rec.roommate.diagnosis}`}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs text-slate-500">Empty room</p>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {transferRecommendations.length > 4 && (
+                  <p className="text-xs text-slate-500 text-center pt-1">
+                    +{transferRecommendations.length - 4} more beds available
+                  </p>
+                )}
+              </div>
+            ) : null}
+
+            {/* Fallback select for manual selection */}
             <select
               value={transferBedId}
               onChange={(e) => setTransferBedId(e.target.value)}
               className="w-full h-12 px-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all bg-white"
             >
               <option value="">Select a bed...</option>
-              {vacantBeds.map((bed) => (
-                <option key={bed.id} value={bed.id}>
-                  {bed.room?.wing?.name} - Room {bed.room?.room_number} - Bed {bed.bed_letter}
-                </option>
-              ))}
+              {vacantBeds.map((bed) => {
+                const rec = transferRecommendations.find(r => r.bedId === bed.id);
+                return (
+                  <option key={bed.id} value={bed.id}>
+                    {bed.room?.wing?.name} - Room {bed.room?.room_number} - Bed {bed.bed_letter}
+                    {rec ? ` (${rec.totalScore}% match)` : ''}
+                  </option>
+                );
+              })}
             </select>
             {vacantBeds.length === 0 && (
               <p className="text-xs text-slate-500 mt-1">No vacant beds available</p>
