@@ -14,7 +14,6 @@ interface ResidentCardProps {
   isSelected: boolean;
   onClick: () => void;
   onAssignBed?: () => void;
-  onUnassignBed?: () => void;
 }
 
 function IsolationStrip({ gender }: { gender: string }) {
@@ -38,18 +37,13 @@ function getStatusStripColor(gender: string): string {
   return 'bg-violet-500';
 }
 
-export function ResidentCard({ resident, bedInfo, isSelected, onClick, onAssignBed, onUnassignBed }: ResidentCardProps) {
+export function ResidentCard({ resident, bedInfo, isSelected, onClick, onAssignBed }: ResidentCardProps) {
   const isIsolation = resident.is_isolation;
   const isUnassigned = !bedInfo;
 
   const handleAssignClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onAssignBed?.();
-  };
-
-  const handleUnassignClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onUnassignBed?.();
   };
 
   return (
@@ -79,15 +73,6 @@ export function ResidentCard({ resident, bedInfo, isSelected, onClick, onAssignB
           >
             <Icon name="bed" size={16} />
             Assign Bed
-          </button>
-        )}
-        {!isUnassigned && onUnassignBed && (
-          <button
-            onClick={handleUnassignClick}
-            className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-sm font-medium rounded-lg transition-colors"
-          >
-            <Icon name="logout" size={16} />
-            Unassign
           </button>
         )}
       </div>

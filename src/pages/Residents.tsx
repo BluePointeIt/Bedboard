@@ -436,10 +436,6 @@ export function Residents() {
                 setTransferBedId('');
                 setShowTransferModal(true);
               }}
-              onUnassignBed={resident.bed_id ? async () => {
-                await unassignResident(resident.id, resident.bed_id!);
-                refetchBeds();
-              } : undefined}
             />
           ))}
         </div>
@@ -468,6 +464,11 @@ export function Residents() {
               setTransferBedId('');
               setShowTransferModal(true);
             }}
+            onUnassign={selectedResident.bed_id ? async () => {
+              await unassignResident(selectedResident.id, selectedResident.bed_id!);
+              refetchBeds();
+              setSelectedResident(null);
+            } : undefined}
           />
         )}
       </SlideOverPanel>

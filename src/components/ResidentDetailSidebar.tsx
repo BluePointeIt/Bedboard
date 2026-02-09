@@ -17,6 +17,7 @@ interface ResidentDetailSidebarProps {
   onDischarge: () => void;
   onEditProfile: () => void;
   onTransfer: () => void;
+  onUnassign?: () => void;
 }
 
 function getStatusStripColor(gender: string, isIsolation: boolean): string {
@@ -109,6 +110,7 @@ export function ResidentDetailSidebar({
   onDischarge,
   onEditProfile,
   onTransfer,
+  onUnassign,
 }: ResidentDetailSidebarProps) {
   const age = calculateAge(resident.date_of_birth);
   const isActive = resident.status === 'active';
@@ -301,6 +303,15 @@ export function ResidentDetailSidebar({
               Edit Profile
             </button>
           </div>
+          {bedInfo && onUnassign && (
+            <button
+              onClick={onUnassign}
+              className="w-full flex items-center justify-center gap-2 h-11 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors mb-3"
+            >
+              <Icon name="bed" size={18} />
+              Unassign Bed
+            </button>
+          )}
           <button
             onClick={onDischarge}
             className="w-full flex items-center justify-center gap-2 h-11 rounded-lg border border-red-200 bg-white text-red-600 font-bold text-sm hover:bg-red-50 transition-colors"
