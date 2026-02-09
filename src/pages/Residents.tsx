@@ -431,6 +431,11 @@ export function Residents() {
               bedInfo={getBedInfoForResident(resident)}
               isSelected={selectedResident?.id === resident.id}
               onClick={() => setSelectedResident(resident)}
+              onAssignBed={() => {
+                setSelectedResident(resident);
+                setTransferBedId('');
+                setShowTransferModal(true);
+              }}
             />
           ))}
         </div>
@@ -1047,16 +1052,16 @@ export function Residents() {
         </div>
       </Modal>
 
-      {/* Transfer Bed Modal */}
+      {/* Transfer/Assign Bed Modal */}
       <Modal
         isOpen={showTransferModal}
         onClose={() => setShowTransferModal(false)}
-        title="Transfer Bed"
+        title={selectedResident?.bed_id ? "Transfer Bed" : "Assign Bed"}
         size="md"
       >
         <div className="space-y-4">
           <p className="text-sm text-slate-600">
-            Select a new bed for{' '}
+            {selectedResident?.bed_id ? 'Select a new bed for' : 'Select a bed to assign'}{' '}
             <span className="font-semibold">
               {selectedResident?.first_name} {selectedResident?.last_name}
             </span>
@@ -1104,7 +1109,7 @@ export function Residents() {
               loading={actionLoading}
               disabled={!transferBedId}
             >
-              Transfer
+              {selectedResident?.bed_id ? 'Transfer' : 'Assign'}
             </Button>
           </div>
         </div>
