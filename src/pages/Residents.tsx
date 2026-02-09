@@ -1211,53 +1211,103 @@ export function Residents() {
             </div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {moveOptimizations.map((opt) => (
-                <div
-                  key={opt.residentId}
-                  className={`p-4 border rounded-xl ${
-                    opt.isDirectPlacement
-                      ? 'bg-emerald-50 border-emerald-200'
-                      : 'bg-violet-50 border-violet-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-slate-900">{opt.residentName}</p>
-                        {opt.isDirectPlacement && (
-                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
-                            Unassigned
-                          </span>
+              {moveOptimizations.map((opt) => {
+                const hasRoommate = opt.roommate && opt.compatibilityScore !== undefined;
+                const scoreColor = (opt.compatibilityScore ?? 100) >= 70
+                  ? 'bg-green-100 text-green-700'
+                  : (opt.compatibilityScore ?? 100) >= 40
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-orange-100 text-orange-700';
+
+                return (
+                  <div
+                    key={`${opt.residentId}-${opt.suggestedBedId}`}
+                    className={`p-4 border rounded-xl ${
+                      opt.isDirectPlacement
+                        ? hasRoommate
+                          ? 'bg-blue-50 border-blue-200'
+                          : 'bg-emerald-50 border-emerald-200'
+                        : 'bg-violet-50 border-violet-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-slate-900">{opt.residentName}</p>
+                          {opt.isDirectPlacement && (
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                              hasRoommate ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                            }`}>
+                              Unassigned
+                            </span>
+                          )}
+                          {hasRoommate && (
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${scoreColor}`}>
+                              {opt.compatibilityScore}% match
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-sm text-slate-600">
+                          {opt.currentBed ? (
+                            <>
+                              <span>{opt.currentBed}</span>
+                              <Icon name="arrow_forward" size={16} className="text-violet-500" />
+                            </>
+                          ) : (
+                            <Icon name="add_circle" size={16} className={hasRoommate ? 'text-blue-500' : 'text-emerald-500'} />
+                          )}
+                          <span>{opt.suggestedBed}</span>
+                        </div>
+
+                        {/* Roommate info */}
+                        {opt.roommate && (
+                          <div className="mt-2 text-sm text-slate-600">
+                            <span className="font-medium">Roommate:</span> {opt.roommate.name}
+                            {opt.roommate.age !== null && ` (${opt.roommate.age}yo)`}
+                            {opt.roommate.diagnosis && `, ${opt.roommate.diagnosis}`}
+                          </div>
                         )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-slate-600">
-                        {opt.currentBed ? (
-                          <>
-                            <span>{opt.currentBed}</span>
-                            <Icon name="arrow_forward" size={16} className="text-violet-500" />
-                          </>
-                        ) : (
-                          <Icon name="add_circle" size={16} className="text-emerald-500" />
+
+                        {/* Compatibility details */}
+                        {hasRoommate && (
+                          <div className="mt-1 flex gap-3 text-xs text-slate-500">
+                            <span>Age: {opt.ageScore}%</span>
+                            <span>Diagnosis: {opt.diagnosisScore}%</span>
+                          </div>
                         )}
-                        <span>{opt.suggestedBed}</span>
+
+                        {/* Warnings */}
+                        {opt.warnings && opt.warnings.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {opt.warnings.map((warning, i) => (
+                              <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded">
+                                <Icon name="warning" size={12} />
+                                {warning}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        <p className={`text-sm mt-2 flex items-center gap-1 ${
+                          opt.isDirectPlacement
+                            ? hasRoommate ? 'text-blue-600' : 'text-emerald-600'
+                            : 'text-violet-600'
+                        }`}>
+                          <Icon name="lightbulb" size={14} />
+                          {opt.reason}
+                        </p>
                       </div>
-                      <p className={`text-sm mt-2 flex items-center gap-1 ${
-                        opt.isDirectPlacement ? 'text-emerald-600' : 'text-violet-600'
-                      }`}>
-                        <Icon name="lightbulb" size={14} />
-                        {opt.reason}
-                      </p>
+                      <Button
+                        size="sm"
+                        onClick={() => handleApplyOptimization(opt)}
+                        loading={actionLoading}
+                      >
+                        {opt.isDirectPlacement ? 'Assign' : 'Apply Move'}
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleApplyOptimization(opt)}
-                      loading={actionLoading}
-                    >
-                      {opt.isDirectPlacement ? 'Assign' : 'Apply Move'}
-                    </Button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

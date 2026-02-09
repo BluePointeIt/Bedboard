@@ -59,6 +59,15 @@ export interface MoveRecommendation {
   reason: string;           // "Would free 2 male beds in Room 101"
   impact: number;           // How many beds this would free up
   isDirectPlacement?: boolean; // True if this is placing an unassigned resident directly
+  compatibilityScore?: number; // 0-100 overall compatibility with potential roommates
+  ageScore?: number;        // 0-100 age compatibility
+  diagnosisScore?: number;  // 0-100 diagnosis compatibility
+  roommate?: {              // Info about potential roommate
+    name: string;
+    age: number | null;
+    diagnosis: string | null;
+  };
+  warnings?: string[];      // Compatibility warnings
 }
 
 /**
@@ -328,40 +337,13 @@ export function analyzeOccupancyOptimization(
 ): MoveRecommendation[] {
   const recommendations: MoveRecommendation[] = [];
 
-  // Find "blocked" beds - vacant beds in multi-bed rooms that are gender-constrained
-  const blockedBeds: Array<{
-    roomId: string;
-    roomNumber: string;
-    wingName: string;
-    constrainedGender: Gender;
-    vacantCount: number;
-    occupiedResident: Resident;
-    occupiedBedId: string;
-  }> = [];
-
-  for (const room of rooms) {
-    if (room.beds.length <= 1) continue; // Skip single rooms
-
+  // Find rooms with partial occupancy (have residents AND vacant beds)
+  const partiallyOccupiedRooms = rooms.filter(room => {
+    if (room.beds.length <= 1) return false; // Skip single rooms
     const vacantBeds = room.beds.filter(b => b.status === 'vacant');
     const occupiedBeds = room.beds.filter(b => b.resident);
-
-    // Room has vacant beds and is gender-constrained
-    if (vacantBeds.length > 0 && occupiedBeds.length > 0 && room.currentGender) {
-      for (const occupied of occupiedBeds) {
-        if (occupied.resident) {
-          blockedBeds.push({
-            roomId: room.roomId,
-            roomNumber: room.roomNumber,
-            wingName: room.wingName,
-            constrainedGender: room.currentGender,
-            vacantCount: vacantBeds.length,
-            occupiedResident: occupied.resident,
-            occupiedBedId: occupied.bedId,
-          });
-        }
-      }
-    }
-  }
+    return vacantBeds.length > 0 && occupiedBeds.length > 0;
+  });
 
   // Count unassigned residents by gender
   const unassignedByGender: Record<Gender, number> = {
@@ -370,113 +352,259 @@ export function analyzeOccupancyOptimization(
     other: unassignedResidents.filter(r => r.gender === 'other').length,
   };
 
-  // For each blocked scenario, check if moving the resident would help
-  for (const blocked of blockedBeds) {
-    const oppositeGender = blocked.constrainedGender === 'male' ? 'female' : 'male';
+  // Helper to calculate compatibility between two residents
+  const calculateResidentCompatibility = (resident1: Resident, resident2: Resident) => {
+    const age1 = calculateAge(resident1.date_of_birth);
+    const age2 = calculateAge(resident2.date_of_birth);
+    const ageScore = scoreAgeCompatibility(age1, age2);
+    const diagResult = scoreDiagnosisCompatibility(resident1.diagnosis, resident2.diagnosis);
+    const compatibilityScore = Math.round((ageScore * 0.4) + (diagResult.score * 0.6));
 
-    // Would moving this resident help? Check if there are unassigned residents of the opposite gender
-    if (unassignedByGender[oppositeGender] > 0) {
-      // Find empty single rooms or rooms with the same gender as the resident being moved
-      const targetRooms = rooms.filter(room => {
-        const vacantBeds = room.beds.filter(b => b.status === 'vacant');
-        if (vacantBeds.length === 0) return false;
+    const warnings: string[] = [];
+    if (ageScore < 30) {
+      warnings.push(`Large age gap (${age1 || '?'} vs ${age2 || '?'})`);
+    }
+    if (diagResult.conflict) {
+      warnings.push(diagResult.conflict);
+    }
 
-        // Prefer empty rooms or rooms with same gender
-        const hasOccupants = room.beds.some(b => b.resident);
-        if (!hasOccupants) return true;
-        if (room.currentGender === blocked.constrainedGender) return true;
+    return { compatibilityScore, ageScore, diagnosisScore: diagResult.score, warnings, age2 };
+  };
 
-        return false;
-      });
+  // Look for CONSOLIDATION opportunities first - this minimizes moves
+  // Find rooms where we can move one resident to another same-gender room to free up an entire room
+  const consolidationMoves: MoveRecommendation[] = [];
+  const roomsUsedForConsolidation = new Set<string>();
 
-      if (targetRooms.length > 0) {
-        // Prefer empty rooms over occupied rooms
-        targetRooms.sort((a, b) => {
-          const aEmpty = !a.beds.some(b => b.resident);
-          const bEmpty = !b.beds.some(b => b.resident);
-          if (aEmpty && !bEmpty) return -1;
-          if (!aEmpty && bEmpty) return 1;
-          return 0;
-        });
+  for (const sourceRoom of partiallyOccupiedRooms) {
+    if (!sourceRoom.currentGender) continue;
+    if (roomsUsedForConsolidation.has(sourceRoom.roomId)) continue;
 
-        const targetRoom = targetRooms[0];
-        const targetBed = targetRoom.beds.find(b => b.status === 'vacant');
+    const oppositeGender = sourceRoom.currentGender === 'male' ? 'female' : 'male';
 
-        if (targetBed) {
-          recommendations.push({
-            residentId: blocked.occupiedResident.id,
-            residentName: `${blocked.occupiedResident.first_name} ${blocked.occupiedResident.last_name}`,
-            currentBedId: blocked.occupiedBedId,
-            currentBed: `Room ${blocked.roomNumber}`,
-            suggestedBedId: targetBed.bedId,
-            suggestedBed: `Room ${targetRoom.roomNumber}`,
-            reason: `Would free ${blocked.vacantCount} bed${blocked.vacantCount > 1 ? 's' : ''} for ${oppositeGender} residents`,
-            impact: blocked.vacantCount,
-          });
+    // Only consider consolidation if there are unassigned residents of the opposite gender who would benefit
+    if (unassignedByGender[oppositeGender] === 0) continue;
+
+    const sourceResidents = sourceRoom.beds.filter(b => b.resident).map(b => ({ bed: b, resident: b.resident! }));
+
+    // Find another same-gender room that can accept this room's residents
+    for (const targetRoom of partiallyOccupiedRooms) {
+      if (targetRoom.roomId === sourceRoom.roomId) continue;
+      if (targetRoom.currentGender !== sourceRoom.currentGender) continue;
+      if (roomsUsedForConsolidation.has(targetRoom.roomId)) continue;
+
+      const targetVacantBeds = targetRoom.beds.filter(b => b.status === 'vacant');
+      const targetResidents = targetRoom.beds.filter(b => b.resident).map(b => b.resident!);
+
+      // Can all source residents fit in target room?
+      if (targetVacantBeds.length < sourceResidents.length) continue;
+
+      // Check compatibility between source residents and target residents
+      let allCompatible = true;
+      let worstCompatibility = 100;
+      let totalCompatibility = 0;
+      const allWarnings: string[] = [];
+
+      for (const source of sourceResidents) {
+        for (const targetResident of targetResidents) {
+          const compat = calculateResidentCompatibility(source.resident, targetResident);
+          if (compat.compatibilityScore < 30 || compat.warnings.some(w => w.includes('conflict'))) {
+            allCompatible = false;
+            break;
+          }
+          worstCompatibility = Math.min(worstCompatibility, compat.compatibilityScore);
+          totalCompatibility += compat.compatibilityScore;
+          allWarnings.push(...compat.warnings);
         }
+        if (!allCompatible) break;
       }
+
+      if (!allCompatible) continue;
+
+      // Good consolidation opportunity found!
+      // Moving source residents to target room frees up the ENTIRE source room
+      const totalBedsFreed = sourceRoom.beds.length; // All beds in source room become available
+
+      for (let i = 0; i < sourceResidents.length; i++) {
+        const source = sourceResidents[i];
+        const targetBed = targetVacantBeds[i];
+        const primaryTargetResident = targetResidents[0];
+        const compat = calculateResidentCompatibility(source.resident, primaryTargetResident);
+
+        consolidationMoves.push({
+          residentId: source.resident.id,
+          residentName: `${source.resident.first_name} ${source.resident.last_name}`,
+          currentBedId: source.bed.bedId,
+          currentBed: `Room ${sourceRoom.roomNumber}`,
+          suggestedBedId: targetBed.bedId,
+          suggestedBed: `Room ${targetRoom.roomNumber}`,
+          reason: `Consolidate to free entire Room ${sourceRoom.roomNumber} (${totalBedsFreed} beds) for ${oppositeGender} residents`,
+          impact: totalBedsFreed,
+          compatibilityScore: compat.compatibilityScore,
+          ageScore: compat.ageScore,
+          diagnosisScore: compat.diagnosisScore,
+          roommate: {
+            name: `${primaryTargetResident.first_name} ${primaryTargetResident.last_name}`,
+            age: compat.age2,
+            diagnosis: primaryTargetResident.diagnosis || null,
+          },
+          warnings: compat.warnings.length > 0 ? compat.warnings : undefined,
+        });
+      }
+
+      // Mark both rooms as used to avoid conflicting recommendations
+      roomsUsedForConsolidation.add(sourceRoom.roomId);
+      roomsUsedForConsolidation.add(targetRoom.roomId);
+      break; // Found a consolidation for this source room
     }
   }
 
-  // Find empty rooms where unassigned residents can be placed directly
-  const emptyRooms = rooms.filter(room => {
-    const hasOccupants = room.beds.some(b => b.resident);
-    const hasVacantBeds = room.beds.some(b => b.status === 'vacant');
-    return !hasOccupants && hasVacantBeds;
-  });
+  // Add consolidation moves first (they're more efficient)
+  recommendations.push(...consolidationMoves);
+
+  // Find rooms where unassigned residents can be placed directly
+  // Include empty rooms and same-gender rooms with vacant beds
+  const getAvailableRoomsForResident = (resident: Resident) => {
+    return rooms.filter(room => {
+      const hasVacantBeds = room.beds.some(b => b.status === 'vacant');
+      if (!hasVacantBeds) return false;
+
+      const hasOccupants = room.beds.some(b => b.resident);
+      // Empty rooms are always available
+      if (!hasOccupants) return true;
+      // Same-gender rooms are available
+      if (room.currentGender === resident.gender) return true;
+
+      return false;
+    });
+  };
+
+  // Helper to calculate compatibility with roommates in a room
+  const calculateRoomCompatibility = (resident: Resident, room: RoomWithOccupancy) => {
+    const roommates = room.beds.filter(b => b.resident).map(b => b.resident!);
+    if (roommates.length === 0) {
+      // Empty room - perfect compatibility
+      return {
+        compatibilityScore: 100,
+        ageScore: 100,
+        diagnosisScore: 100,
+        roommate: undefined,
+        warnings: [] as string[],
+      };
+    }
+
+    // Calculate compatibility with the first roommate (primary)
+    const primaryRoommate = roommates[0];
+    const residentAge = calculateAge(resident.date_of_birth);
+    const roommateAge = calculateAge(primaryRoommate.date_of_birth);
+
+    const ageScore = scoreAgeCompatibility(residentAge, roommateAge);
+    const diagResult = scoreDiagnosisCompatibility(resident.diagnosis, primaryRoommate.diagnosis);
+    const diagnosisScore = diagResult.score;
+
+    // Overall score is weighted average
+    const compatibilityScore = Math.round((ageScore * 0.4) + (diagnosisScore * 0.6));
+
+    const warnings: string[] = [];
+    if (ageScore < 30) {
+      warnings.push(`Large age gap (${residentAge || '?'} vs ${roommateAge || '?'})`);
+    }
+    if (diagResult.conflict) {
+      warnings.push(diagResult.conflict);
+    } else if (diagnosisScore < 30) {
+      warnings.push('Different diagnosis categories');
+    }
+
+    return {
+      compatibilityScore,
+      ageScore,
+      diagnosisScore,
+      roommate: {
+        name: `${primaryRoommate.first_name} ${primaryRoommate.last_name}`,
+        age: roommateAge,
+        diagnosis: primaryRoommate.diagnosis || null,
+      },
+      warnings,
+    };
+  };
 
   // Track which unassigned residents already have move recommendations
   const residentsWithMoveRecs = new Set(recommendations.map(r => r.residentId));
 
-  // For each unassigned resident without a move recommendation, suggest empty room placement
+  // For each unassigned resident without a move recommendation, suggest available room placements
   for (const resident of unassignedResidents) {
     // Skip if this resident already has a move-based recommendation
     if (residentsWithMoveRecs.has(resident.id)) continue;
 
-    // Find an empty room for this resident
-    const availableRoom = emptyRooms.find(room => {
-      const vacantBed = room.beds.find(b => b.status === 'vacant');
-      return !!vacantBed;
-    });
+    const availableRooms = getAvailableRoomsForResident(resident);
 
-    if (availableRoom) {
-      const targetBed = availableRoom.beds.find(b => b.status === 'vacant');
+    // Create a recommendation for each available room
+    for (const room of availableRooms) {
+      const targetBed = room.beds.find(b => b.status === 'vacant');
       if (targetBed) {
+        const compatibility = calculateRoomCompatibility(resident, room);
+        const hasOccupants = room.beds.some(b => b.resident);
+
+        let reason: string;
+        if (!hasOccupants) {
+          reason = 'Empty room available - no gender constraints';
+        } else if (compatibility.compatibilityScore >= 70) {
+          reason = `Good compatibility with roommate (${compatibility.compatibilityScore}%)`;
+        } else if (compatibility.compatibilityScore >= 40) {
+          reason = `Moderate compatibility with roommate (${compatibility.compatibilityScore}%)`;
+        } else {
+          reason = `Low compatibility with roommate (${compatibility.compatibilityScore}%)`;
+        }
+
         recommendations.push({
           residentId: resident.id,
           residentName: `${resident.first_name} ${resident.last_name}`,
           currentBedId: undefined,
           currentBed: undefined,
           suggestedBedId: targetBed.bedId,
-          suggestedBed: `Room ${availableRoom.roomNumber}`,
-          reason: `Empty room available - no gender constraints`,
-          impact: availableRoom.beds.filter(b => b.status === 'vacant').length,
+          suggestedBed: `Room ${room.roomNumber}`,
+          reason,
+          impact: room.beds.filter(b => b.status === 'vacant').length,
           isDirectPlacement: true,
+          compatibilityScore: compatibility.compatibilityScore,
+          ageScore: compatibility.ageScore,
+          diagnosisScore: compatibility.diagnosisScore,
+          roommate: compatibility.roommate,
+          warnings: compatibility.warnings,
         });
-
-        // Remove this room from available empty rooms to avoid double-assigning
-        const roomIndex = emptyRooms.indexOf(availableRoom);
-        if (roomIndex > -1) {
-          emptyRooms.splice(roomIndex, 1);
-        }
       }
     }
   }
 
-  // Sort: move recommendations first (by impact), then direct placements (by impact)
+  // Sort: move recommendations first (by impact), then direct placements grouped by resident (by compatibility)
   recommendations.sort((a, b) => {
     // Moves first, then direct placements
     if (a.isDirectPlacement && !b.isDirectPlacement) return 1;
     if (!a.isDirectPlacement && b.isDirectPlacement) return -1;
-    // Within same type, sort by impact
+    // For direct placements, group by resident name, then sort by compatibility score
+    if (a.isDirectPlacement && b.isDirectPlacement) {
+      if (a.residentName !== b.residentName) {
+        return a.residentName.localeCompare(b.residentName);
+      }
+      // Same resident - sort by compatibility score (higher first)
+      const aScore = a.compatibilityScore ?? 0;
+      const bScore = b.compatibilityScore ?? 0;
+      if (aScore !== bScore) return bScore - aScore;
+    }
+    // Within same type/resident, sort by impact
     return b.impact - a.impact;
   });
 
-  // Remove duplicate recommendations for the same resident
+  // Remove duplicate recommendations for the same resident+bed combination
+  // For moves: one recommendation per resident
+  // For direct placements: allow multiple (one per empty room)
   const seen = new Set<string>();
   const uniqueRecommendations = recommendations.filter(rec => {
-    if (seen.has(rec.residentId)) return false;
-    seen.add(rec.residentId);
+    const key = rec.isDirectPlacement
+      ? `${rec.residentId}-${rec.suggestedBedId}` // Unique per resident+bed for direct placements
+      : rec.residentId; // Unique per resident for moves
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 
