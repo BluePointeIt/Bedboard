@@ -298,6 +298,20 @@ export function Settings() {
   const handleImport = async () => {
     if (importPreview.length === 0) return;
 
+    // Calculate total beds being imported
+    const budgetedBeds = currentFacility?.total_beds || 0;
+    if (budgetedBeds > 0) {
+      const bedsToImport = importPreview.reduce((sum, row) => {
+        const bedLetters = row.beds.split(/[,\s]+/).filter(b => b.trim());
+        return sum + bedLetters.length;
+      }, 0);
+
+      if (totalBeds + bedsToImport > budgetedBeds) {
+        setImportError(`Cannot import: Would exceed facility capacity. Current: ${totalBeds}, importing: ${bedsToImport}, budget: ${budgetedBeds}. Update the facility's total beds in Admin to increase capacity.`);
+        return;
+      }
+    }
+
     setImporting(true);
     setImportError(null);
 
@@ -685,6 +699,13 @@ export function Settings() {
     const bedValidation = validateBedLetter(addBedForm.bed_letter);
     if (!bedValidation.valid) {
       setActionError(bedValidation.error || 'Invalid bed letter');
+      return;
+    }
+
+    // Check if adding this bed would exceed the facility's budgeted total
+    const budgetedBeds = currentFacility?.total_beds || 0;
+    if (budgetedBeds > 0 && totalBeds >= budgetedBeds) {
+      setActionError(`Cannot add bed: Facility is at capacity (${totalBeds}/${budgetedBeds} budgeted beds). Update the facility's total beds in Admin to increase capacity.`);
       return;
     }
 
@@ -1636,6 +1657,23 @@ export function Settings() {
           {actionError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
               {actionError}
+            </div>
+          )}
+
+          {/* Capacity warning */}
+          {currentFacility?.total_beds && currentFacility.total_beds > 0 && (
+            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+              totalBeds >= currentFacility.total_beds
+                ? 'bg-red-50 border border-red-200 text-red-700'
+                : totalBeds >= currentFacility.total_beds - 5
+                ? 'bg-amber-50 border border-amber-200 text-amber-700'
+                : 'bg-slate-50 border border-slate-200 text-slate-600'
+            }`}>
+              <Icon name={totalBeds >= currentFacility.total_beds ? 'error' : 'info'} size={16} />
+              <span>
+                Facility capacity: <strong>{totalBeds}/{currentFacility.total_beds}</strong> beds
+                {totalBeds >= currentFacility.total_beds && ' (at capacity)'}
+              </span>
             </div>
           )}
 

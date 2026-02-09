@@ -776,9 +776,15 @@ export function Admin() {
                         </p>
                       )}
                       {facility.phone && (
-                        <p className="text-sm text-slate-500 mb-3 flex items-center gap-1">
+                        <p className="text-sm text-slate-500 mb-1 flex items-center gap-1">
                           <Icon name="phone" size={14} />
                           {facility.phone}
+                        </p>
+                      )}
+                      {facility.total_beds !== undefined && facility.total_beds > 0 && (
+                        <p className="text-sm text-slate-500 mb-3 flex items-center gap-1">
+                          <Icon name="bed" size={14} />
+                          {facility.total_beds} budgeted beds
                         </p>
                       )}
                       {canManageFacilities && (
