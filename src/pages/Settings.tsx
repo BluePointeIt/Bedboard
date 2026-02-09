@@ -829,7 +829,7 @@ export function Settings() {
             <Icon name="pie_chart" size={16} className="text-slate-400" />
             Case-Mix <span className="font-normal text-slate-500">(Budgeted Residents)</span>
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-500 mb-1">Private</label>
               <input
@@ -895,6 +895,12 @@ export function Settings() {
                 placeholder="0"
                 className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-green-600 mb-1">Total</label>
+              <div className="w-full h-12 px-3 border border-green-200 rounded-lg bg-green-50 flex items-center justify-center">
+                <span className="text-lg font-bold text-green-600">{caseMixTotal}</span>
+              </div>
             </div>
           </div>
         </div>
