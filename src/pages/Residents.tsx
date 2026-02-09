@@ -43,7 +43,7 @@ export function Residents() {
   } = useResidents({ facilityId: currentFacility?.id });
 
   const { beds, refetch: refetchBeds } = useBeds({ facilityId: currentFacility?.id });
-  const { assignResident, unassignResident, getBedRecommendationsForNewResident } = useBedActions();
+  const { assignResident, unassignResident, getBedRecommendationsForNewResident, checkGenderCompatibility } = useBedActions();
 
   const [showDischargedTab, setShowDischargedTab] = useState(false);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
@@ -95,6 +95,7 @@ export function Residents() {
   // Transfer Bed Modal State
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [transferBedId, setTransferBedId] = useState<string>('');
+  const [transferError, setTransferError] = useState<string | null>(null);
 
   // Bed recommendations state for new resident
   const [bedRecommendations, setBedRecommendations] = useState<BedCompatibilityScore[]>([]);
@@ -329,6 +330,20 @@ export function Residents() {
   const handleTransferBed = async () => {
     if (!selectedResident || !transferBedId) return;
     setActionLoading(true);
+    setTransferError(null);
+
+    // Check gender compatibility before transfer
+    const compatibility = await checkGenderCompatibility(
+      transferBedId,
+      selectedResident.gender,
+      selectedResident.is_isolation
+    );
+
+    if (!compatibility.compatible) {
+      setTransferError(compatibility.reason || 'This bed is not compatible with the resident.');
+      setActionLoading(false);
+      return;
+    }
 
     // If resident currently has a bed, unassign first
     if (selectedResident.bed_id) {
@@ -342,6 +357,7 @@ export function Residents() {
     setActionLoading(false);
     setShowTransferModal(false);
     setTransferBedId('');
+    setTransferError(null);
     setSelectedResident(null);
   };
 
@@ -434,6 +450,7 @@ export function Residents() {
               onAssignBed={() => {
                 setSelectedResident(resident);
                 setTransferBedId('');
+                setTransferError(null);
                 setShowTransferModal(true);
               }}
             />
@@ -462,6 +479,7 @@ export function Residents() {
             onEditProfile={handleEditClick}
             onTransfer={() => {
               setTransferBedId('');
+              setTransferError(null);
               setShowTransferModal(true);
             }}
             onUnassign={selectedResident.bed_id ? async () => {
@@ -1060,15 +1078,25 @@ export function Residents() {
       {/* Transfer/Assign Bed Modal */}
       <Modal
         isOpen={showTransferModal}
-        onClose={() => setShowTransferModal(false)}
+        onClose={() => { setShowTransferModal(false); setTransferError(null); }}
         title={selectedResident?.bed_id ? "Transfer Bed" : "Assign Bed"}
         size="md"
       >
         <div className="space-y-4">
+          {transferError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+              <Icon name="error" size={18} className="flex-shrink-0 mt-0.5" />
+              <span>{transferError}</span>
+            </div>
+          )}
+
           <p className="text-sm text-slate-600">
             {selectedResident?.bed_id ? 'Select a new bed for' : 'Select a bed to assign'}{' '}
             <span className="font-semibold">
               {selectedResident?.first_name} {selectedResident?.last_name}
+            </span>
+            <span className="text-xs text-slate-400 block mt-1">
+              ({selectedResident?.gender} resident{selectedResident?.is_isolation ? ', isolation' : ''})
             </span>
           </p>
 
