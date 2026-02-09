@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Button, Icon, Modal } from '../components';
 import { useWings } from '../hooks/useWings';
 import { useRooms, useRoomActions } from '../hooks/useRooms';
 import { useBedActions } from '../hooks/useBeds';
-import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import type { LayoutContext } from '../components/AppLayout';
 import type { WingType, WingWithStats, RoomWithBeds, Room, Bed } from '../types';
 import {
   validateNonNegativeNumber,
@@ -45,7 +46,7 @@ const DEFAULT_PAYOR_RATES: PayorRates = {
 };
 
 export function Settings() {
-  const { currentFacility } = useAuth();
+  const { currentFacility } = useOutletContext<LayoutContext>();
   const [facilityName, setFacilityName] = useState('MediBed Pro Facility');
   const [saved, setSaved] = useState(false);
 
