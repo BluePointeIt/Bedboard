@@ -13,9 +13,6 @@ function extractSingleRelation<T>(data: T | T[] | null | undefined): T | null {
   return data;
 }
 
-// Generate unique channel IDs for real-time subscriptions
-let authChannelCounter = 0;
-
 interface AuthState {
   user: SupabaseUser | null;
   profile: User | null;
@@ -40,7 +37,6 @@ export function useAuth() {
   });
   const profileFetchedRef = useRef<string | null>(null);
   const facilitiesFetchedRef = useRef<string | null>(null);
-  const channelIdRef = useRef(`auth-facilities-${++authChannelCounter}-${Date.now()}`);
 
   useEffect(() => {
     let mounted = true;
@@ -237,12 +233,16 @@ export function useAuth() {
     const userId = state.profile.id;
     const role = state.profile.role;
 
+    // Generate unique channel ID for this subscription instance
+    const channelId = `auth-facilities-${userId}-${Date.now()}`;
+
     const channel = supabase
-      .channel(channelIdRef.current)
+      .channel(channelId)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'companies' },
-        () => {
+        (payload) => {
+          console.log('Companies change detected:', payload);
           // Refetch facilities when any company changes
           refetchAccessibleFacilities(userId, role, false);
         }
@@ -250,14 +250,17 @@ export function useAuth() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_facilities' },
-        () => {
+        (payload) => {
+          console.log('User facilities change detected:', payload);
           // Refetch facilities when user_facilities changes (for regional users)
           if (role === 'regional') {
             refetchAccessibleFacilities(userId, role, false);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Auth facilities subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
