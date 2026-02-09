@@ -343,7 +343,10 @@ export function Residents() {
 
   const handleApplyOptimization = async (opt: MoveRecommendation) => {
     setActionLoading(true);
-    await unassignResident(opt.residentId, opt.currentBedId);
+    // Only unassign if this is a move (not a direct placement)
+    if (opt.currentBedId) {
+      await unassignResident(opt.residentId, opt.currentBedId);
+    }
     await assignResident(opt.suggestedBedId, opt.residentId);
     const unassigned = residents.filter(r => r.status === 'active' && !r.bed_id);
     const newOptimizations = await getMoveOptimizations(unassigned);
@@ -1209,16 +1212,38 @@ export function Residents() {
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {moveOptimizations.map((opt) => (
-                <div key={opt.residentId} className="p-4 bg-violet-50 border border-violet-200 rounded-xl">
+                <div
+                  key={opt.residentId}
+                  className={`p-4 border rounded-xl ${
+                    opt.isDirectPlacement
+                      ? 'bg-emerald-50 border-emerald-200'
+                      : 'bg-violet-50 border-violet-200'
+                  }`}
+                >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <p className="font-semibold text-slate-900">{opt.residentName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-slate-900">{opt.residentName}</p>
+                        {opt.isDirectPlacement && (
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+                            Unassigned
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 mt-1 text-sm text-slate-600">
-                        <span>{opt.currentBed}</span>
-                        <Icon name="arrow_forward" size={16} className="text-violet-500" />
+                        {opt.currentBed ? (
+                          <>
+                            <span>{opt.currentBed}</span>
+                            <Icon name="arrow_forward" size={16} className="text-violet-500" />
+                          </>
+                        ) : (
+                          <Icon name="add_circle" size={16} className="text-emerald-500" />
+                        )}
                         <span>{opt.suggestedBed}</span>
                       </div>
-                      <p className="text-sm text-violet-600 mt-2 flex items-center gap-1">
+                      <p className={`text-sm mt-2 flex items-center gap-1 ${
+                        opt.isDirectPlacement ? 'text-emerald-600' : 'text-violet-600'
+                      }`}>
                         <Icon name="lightbulb" size={14} />
                         {opt.reason}
                       </p>
@@ -1228,7 +1253,7 @@ export function Residents() {
                       onClick={() => handleApplyOptimization(opt)}
                       loading={actionLoading}
                     >
-                      Apply Move
+                      {opt.isDirectPlacement ? 'Assign' : 'Apply Move'}
                     </Button>
                   </div>
                 </div>

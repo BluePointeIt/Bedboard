@@ -615,7 +615,9 @@ export function Dashboard() {
         onToggleOptimizations={() => setAssignState(prev => ({ ...prev, showOptimizations: !prev.showOptimizations }))}
         onApplyOptimization={async (opt) => {
           setActionLoading(true);
-          await unassignResident(opt.residentId, opt.currentBedId);
+          if (opt.currentBedId) {
+            await unassignResident(opt.residentId, opt.currentBedId);
+          }
           await assignResident(opt.suggestedBedId, opt.residentId);
           setActionLoading(false);
           // Refresh recommendations

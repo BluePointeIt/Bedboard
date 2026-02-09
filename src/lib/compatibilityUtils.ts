@@ -52,12 +52,13 @@ export interface BedCompatibilityScore {
 export interface MoveRecommendation {
   residentId: string;
   residentName: string;
-  currentBedId: string;
-  currentBed: string;       // e.g., "Room 102A"
+  currentBedId?: string;    // Optional - empty for direct placements
+  currentBed?: string;      // e.g., "Room 102A" - empty for direct placements
   suggestedBedId: string;
   suggestedBed: string;     // e.g., "Room 105A"
   reason: string;           // "Would free 2 male beds in Room 101"
   impact: number;           // How many beds this would free up
+  isDirectPlacement?: boolean; // True if this is placing an unassigned resident directly
 }
 
 /**
@@ -417,8 +418,59 @@ export function analyzeOccupancyOptimization(
     }
   }
 
-  // Sort by impact (highest first)
-  recommendations.sort((a, b) => b.impact - a.impact);
+  // Find empty rooms where unassigned residents can be placed directly
+  const emptyRooms = rooms.filter(room => {
+    const hasOccupants = room.beds.some(b => b.resident);
+    const hasVacantBeds = room.beds.some(b => b.status === 'vacant');
+    return !hasOccupants && hasVacantBeds;
+  });
+
+  // Track which unassigned residents already have move recommendations
+  const residentsWithMoveRecs = new Set(recommendations.map(r => r.residentId));
+
+  // For each unassigned resident without a move recommendation, suggest empty room placement
+  for (const resident of unassignedResidents) {
+    // Skip if this resident already has a move-based recommendation
+    if (residentsWithMoveRecs.has(resident.id)) continue;
+
+    // Find an empty room for this resident
+    const availableRoom = emptyRooms.find(room => {
+      const vacantBed = room.beds.find(b => b.status === 'vacant');
+      return !!vacantBed;
+    });
+
+    if (availableRoom) {
+      const targetBed = availableRoom.beds.find(b => b.status === 'vacant');
+      if (targetBed) {
+        recommendations.push({
+          residentId: resident.id,
+          residentName: `${resident.first_name} ${resident.last_name}`,
+          currentBedId: undefined,
+          currentBed: undefined,
+          suggestedBedId: targetBed.bedId,
+          suggestedBed: `Room ${availableRoom.roomNumber}`,
+          reason: `Empty room available - no gender constraints`,
+          impact: availableRoom.beds.filter(b => b.status === 'vacant').length,
+          isDirectPlacement: true,
+        });
+
+        // Remove this room from available empty rooms to avoid double-assigning
+        const roomIndex = emptyRooms.indexOf(availableRoom);
+        if (roomIndex > -1) {
+          emptyRooms.splice(roomIndex, 1);
+        }
+      }
+    }
+  }
+
+  // Sort: move recommendations first (by impact), then direct placements (by impact)
+  recommendations.sort((a, b) => {
+    // Moves first, then direct placements
+    if (a.isDirectPlacement && !b.isDirectPlacement) return 1;
+    if (!a.isDirectPlacement && b.isDirectPlacement) return -1;
+    // Within same type, sort by impact
+    return b.impact - a.impact;
+  });
 
   // Remove duplicate recommendations for the same resident
   const seen = new Set<string>();

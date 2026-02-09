@@ -266,17 +266,21 @@ export function BedAssignmentModal({
                 {assignState.moveOptimizations.slice(0, 3).map((opt) => (
                   <div
                     key={opt.residentId}
-                    className="p-3 bg-violet-50 border border-violet-200 rounded-lg"
+                    className={`p-3 border rounded-lg ${
+                      opt.isDirectPlacement
+                        ? 'bg-emerald-50 border-emerald-200'
+                        : 'bg-violet-50 border-violet-200'
+                    }`}
                   >
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-sm font-medium text-slate-900">
-                          Move {opt.residentName}
+                          {opt.isDirectPlacement ? 'Assign' : 'Move'} {opt.residentName}
                         </p>
                         <p className="text-xs text-slate-600 mt-0.5">
-                          {opt.currentBed} → {opt.suggestedBed}
+                          {opt.currentBed ? `${opt.currentBed} → ` : ''}{opt.suggestedBed}
                         </p>
-                        <p className="text-xs text-violet-600 mt-1">
+                        <p className={`text-xs mt-1 ${opt.isDirectPlacement ? 'text-emerald-600' : 'text-violet-600'}`}>
                           {opt.reason}
                         </p>
                       </div>
