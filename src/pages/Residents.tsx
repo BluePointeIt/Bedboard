@@ -5,7 +5,7 @@ import { useBeds, useBedActions } from '../hooks/useBeds';
 import { Icon, Button, Modal, DiagnosisSelect, ResidentCard, SlideOverPanel, ResidentDetailSidebar } from '../components';
 import type { Resident, IsolationType, PayorType, Gender } from '../types';
 import type { LayoutContext } from '../components/AppLayout';
-import { getCompatibilityLabel, type BedCompatibilityScore } from '../lib/compatibilityUtils';
+import { getCompatibilityLabel, type BedCompatibilityScore, type MoveRecommendation } from '../lib/compatibilityUtils';
 import {
   validateDateOfBirth,
   validateAdmissionDate,
@@ -43,7 +43,7 @@ export function Residents() {
   } = useResidents({ facilityId: currentFacility?.id });
 
   const { beds, refetch: refetchBeds } = useBeds({ facilityId: currentFacility?.id });
-  const { assignResident, unassignResident, getBedRecommendationsForNewResident, checkGenderCompatibility } = useBedActions();
+  const { assignResident, unassignResident, getBedRecommendationsForNewResident, checkGenderCompatibility, getMoveOptimizations } = useBedActions();
 
   const [showDischargedTab, setShowDischargedTab] = useState(false);
   const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
@@ -100,6 +100,11 @@ export function Residents() {
   // Bed recommendations state for new resident
   const [bedRecommendations, setBedRecommendations] = useState<BedCompatibilityScore[]>([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+
+  // Optimize beds modal state
+  const [showOptimizeModal, setShowOptimizeModal] = useState(false);
+  const [moveOptimizations, setMoveOptimizations] = useState<MoveRecommendation[]>([]);
+  const [optimizeLoading, setOptimizeLoading] = useState(false);
 
   // Fetch bed recommendations when add modal is open and gender is set
   useEffect(() => {
@@ -327,6 +332,26 @@ export function Residents() {
     };
   };
 
+  const handleOpenOptimize = async () => {
+    setShowOptimizeModal(true);
+    setOptimizeLoading(true);
+    const unassigned = residents.filter(r => r.status === 'active' && !r.bed_id);
+    const optimizations = await getMoveOptimizations(unassigned);
+    setMoveOptimizations(optimizations);
+    setOptimizeLoading(false);
+  };
+
+  const handleApplyOptimization = async (opt: MoveRecommendation) => {
+    setActionLoading(true);
+    await unassignResident(opt.residentId, opt.currentBedId);
+    await assignResident(opt.suggestedBedId, opt.residentId);
+    const unassigned = residents.filter(r => r.status === 'active' && !r.bed_id);
+    const newOptimizations = await getMoveOptimizations(unassigned);
+    setMoveOptimizations(newOptimizations);
+    await refetchBeds();
+    setActionLoading(false);
+  };
+
   const handleTransferBed = async () => {
     if (!selectedResident || !transferBedId) return;
     setActionLoading(true);
@@ -409,10 +434,20 @@ export function Residents() {
               Discharged ({dischargedResidents.length})
             </button>
           </div>
-          <Button onClick={() => { resetAddForm(); setShowAddModal(true); }}>
-            <Icon name="person_add" size={18} className="mr-2" />
-            Add Resident
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={handleOpenOptimize}
+              disabled={!residents.some(r => r.status === 'active' && !r.bed_id)}
+            >
+              <Icon name="lightbulb" size={18} className="mr-2" />
+              Optimize Beds
+            </Button>
+            <Button onClick={() => { resetAddForm(); setShowAddModal(true); }}>
+              <Icon name="person_add" size={18} className="mr-2" />
+              Add Resident
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -1143,6 +1178,67 @@ export function Residents() {
               disabled={!transferBedId}
             >
               {selectedResident?.bed_id ? 'Transfer' : 'Assign'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Optimize Beds Modal */}
+      <Modal
+        isOpen={showOptimizeModal}
+        onClose={() => setShowOptimizeModal(false)}
+        title="Bed Optimization"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            These suggestions help accommodate unassigned residents by relocating current residents to free up compatible beds.
+          </p>
+
+          {optimizeLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500" />
+              <span className="ml-3 text-sm text-slate-500">Analyzing bed assignments...</span>
+            </div>
+          ) : moveOptimizations.length === 0 ? (
+            <div className="text-center py-8">
+              <Icon name="check_circle" size={48} className="mx-auto text-green-500 mb-3" />
+              <p className="text-slate-700 font-medium">Beds are optimally assigned</p>
+              <p className="text-sm text-slate-500 mt-1">No moves needed to accommodate waiting residents.</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {moveOptimizations.map((opt) => (
+                <div key={opt.residentId} className="p-4 bg-violet-50 border border-violet-200 rounded-xl">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="font-semibold text-slate-900">{opt.residentName}</p>
+                      <div className="flex items-center gap-2 mt-1 text-sm text-slate-600">
+                        <span>{opt.currentBed}</span>
+                        <Icon name="arrow_forward" size={16} className="text-violet-500" />
+                        <span>{opt.suggestedBed}</span>
+                      </div>
+                      <p className="text-sm text-violet-600 mt-2 flex items-center gap-1">
+                        <Icon name="lightbulb" size={14} />
+                        {opt.reason}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleApplyOptimization(opt)}
+                      loading={actionLoading}
+                    >
+                      Apply Move
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-4 border-t border-slate-200">
+            <Button variant="secondary" onClick={() => setShowOptimizeModal(false)}>
+              Close
             </Button>
           </div>
         </div>
