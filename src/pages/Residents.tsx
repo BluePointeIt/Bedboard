@@ -436,6 +436,10 @@ export function Residents() {
                 setTransferBedId('');
                 setShowTransferModal(true);
               }}
+              onUnassignBed={resident.bed_id ? async () => {
+                await unassignResident(resident.id, resident.bed_id!);
+                refetchBeds();
+              } : undefined}
             />
           ))}
         </div>
