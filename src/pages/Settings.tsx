@@ -4,8 +4,10 @@ import { Button, Icon, Modal } from '../components';
 import { useWings } from '../hooks/useWings';
 import { useRooms, useRoomActions } from '../hooks/useRooms';
 import { useBedActions } from '../hooks/useBeds';
+import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import type { LayoutContext } from '../components/AppLayout';
+import { isSuperuser } from '../lib/permissions';
 import type { WingType, WingWithStats, RoomWithBeds, Room, Bed } from '../types';
 import {
   validateNonNegativeNumber,
@@ -47,6 +49,8 @@ const DEFAULT_PAYOR_RATES: PayorRates = {
 
 export function Settings() {
   const { currentFacility } = useOutletContext<LayoutContext>();
+  const { profile } = useAuth();
+  const canEditBudgetedBeds = isSuperuser(profile);
   const [facilityName, setFacilityName] = useState('MediBed Pro Facility');
   const [saved, setSaved] = useState(false);
 
@@ -803,19 +807,22 @@ export function Settings() {
           <div>
             <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
               <Icon name="bed" size={16} className="text-slate-400" />
-              Total Facility Beds
+              Facility Beds
             </label>
-            <div className="h-12 px-4 flex items-center border border-slate-200 rounded-lg bg-slate-50">
-              <span className="text-2xl font-bold text-primary-500">{totalBeds}</span>
-              <span className="text-sm text-slate-500 ml-2">
-                beds across {wings.length} wings
-                {currentFacility?.total_beds && currentFacility.total_beds > 0 && (
-                  <span className="ml-2">
-                    (budgeted: <span className="font-semibold">{currentFacility.total_beds}</span>)
-                  </span>
-                )}
-              </span>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 h-12 px-4 flex items-center border border-slate-200 rounded-lg bg-slate-50">
+                <span className="text-2xl font-bold text-primary-500">{totalBeds}</span>
+                <span className="text-sm text-slate-500 ml-2">actual beds</span>
+              </div>
+              <div className="text-slate-400">/</div>
+              <div className="flex-1 h-12 px-4 flex items-center border border-primary-200 rounded-lg bg-primary-50">
+                <span className="text-2xl font-bold text-primary-500">{currentFacility?.total_beds || 0}</span>
+                <span className="text-sm text-slate-500 ml-2">budgeted</span>
+              </div>
             </div>
+            {!canEditBudgetedBeds && (
+              <p className="text-xs text-slate-400 mt-1">Budgeted beds can only be changed by superadmin in Admin → Facility Management</p>
+            )}
           </div>
         </div>
 
