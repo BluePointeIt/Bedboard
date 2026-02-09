@@ -303,16 +303,16 @@ export function Settings() {
   const handleImport = async () => {
     if (importPreview.length === 0) return;
 
-    // Calculate total beds being imported
+    // Calculate total beds being imported (superadmins can bypass limit)
     const budgetedBeds = currentFacility?.total_beds || 0;
-    if (budgetedBeds > 0) {
+    if (!canEditBudgetedBeds && budgetedBeds > 0) {
       const bedsToImport = importPreview.reduce((sum, row) => {
         const bedLetters = row.beds.split(/[,\s]+/).filter(b => b.trim());
         return sum + bedLetters.length;
       }, 0);
 
       if (totalBeds + bedsToImport > budgetedBeds) {
-        setImportError(`Cannot import: Would exceed facility capacity. Current: ${totalBeds}, importing: ${bedsToImport}, budget: ${budgetedBeds}. Update the facility's total beds in Admin to increase capacity.`);
+        setImportError(`Cannot import: Would exceed facility capacity. Current: ${totalBeds}, importing: ${bedsToImport}, budget: ${budgetedBeds}. Contact a superadmin to increase the budgeted beds.`);
         return;
       }
     }
@@ -707,10 +707,10 @@ export function Settings() {
       return;
     }
 
-    // Check if adding this bed would exceed the facility's budgeted total
+    // Check if adding this bed would exceed the facility's budgeted total (superadmins can bypass)
     const budgetedBeds = currentFacility?.total_beds || 0;
-    if (budgetedBeds > 0 && totalBeds >= budgetedBeds) {
-      setActionError(`Cannot add bed: Facility is at capacity (${totalBeds}/${budgetedBeds} budgeted beds). Update the facility's total beds in Admin to increase capacity.`);
+    if (!canEditBudgetedBeds && budgetedBeds > 0 && totalBeds >= budgetedBeds) {
+      setActionError(`Cannot add bed: Facility is at capacity (${totalBeds}/${budgetedBeds} budgeted beds). Contact a superadmin to increase the budgeted beds.`);
       return;
     }
 
@@ -807,18 +807,16 @@ export function Settings() {
           <div>
             <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-2">
               <Icon name="bed" size={16} className="text-slate-400" />
-              Facility Beds
+              Total Facility Beds
             </label>
-            <div className="flex items-center gap-4">
-              <div className="flex-1 h-12 px-4 flex items-center border border-slate-200 rounded-lg bg-slate-50">
-                <span className="text-2xl font-bold text-primary-500">{totalBeds}</span>
-                <span className="text-sm text-slate-500 ml-2">actual beds</span>
-              </div>
-              <div className="text-slate-400">/</div>
-              <div className="flex-1 h-12 px-4 flex items-center border border-primary-200 rounded-lg bg-primary-50">
-                <span className="text-2xl font-bold text-primary-500">{currentFacility?.total_beds || 0}</span>
-                <span className="text-sm text-slate-500 ml-2">budgeted</span>
-              </div>
+            <div className="h-12 px-4 flex items-center border border-slate-200 rounded-lg bg-slate-50">
+              <span className="text-2xl font-bold text-primary-500">{currentFacility?.total_beds || 0}</span>
+              <span className="text-sm text-slate-500 ml-2">
+                budgeted beds
+                <span className="ml-2 text-slate-400">
+                  ({totalBeds} configured across {wings.length} wings)
+                </span>
+              </span>
             </div>
             {!canEditBudgetedBeds && (
               <p className="text-xs text-slate-400 mt-1">Budgeted beds can only be changed by superadmin in Admin → Facility Management</p>
@@ -1671,16 +1669,16 @@ export function Settings() {
           {/* Capacity warning */}
           {currentFacility?.total_beds && currentFacility.total_beds > 0 && (
             <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-              totalBeds >= currentFacility.total_beds
+              totalBeds >= currentFacility.total_beds && !canEditBudgetedBeds
                 ? 'bg-red-50 border border-red-200 text-red-700'
                 : totalBeds >= currentFacility.total_beds - 5
                 ? 'bg-amber-50 border border-amber-200 text-amber-700'
                 : 'bg-slate-50 border border-slate-200 text-slate-600'
             }`}>
-              <Icon name={totalBeds >= currentFacility.total_beds ? 'error' : 'info'} size={16} />
+              <Icon name={totalBeds >= currentFacility.total_beds && !canEditBudgetedBeds ? 'error' : 'info'} size={16} />
               <span>
                 Facility capacity: <strong>{totalBeds}/{currentFacility.total_beds}</strong> beds
-                {totalBeds >= currentFacility.total_beds && ' (at capacity)'}
+                {totalBeds >= currentFacility.total_beds && (canEditBudgetedBeds ? ' (superadmin can exceed)' : ' (at capacity)')}
               </span>
             </div>
           )}
