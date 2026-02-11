@@ -4,6 +4,7 @@ import { useWings } from '../hooks/useWings';
 import { useBeds } from '../hooks/useBeds';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { isRegionalOrHigher } from '../lib/permissions';
 import type { Gender } from '../types';
 
 interface PayorRates {
@@ -40,46 +41,150 @@ const PAYOR_LABELS: Record<string, string> = {
 };
 
 export function Analytics() {
-  const { currentFacility } = useAuth();
-  const { wings } = useWings({ facilityId: currentFacility?.id });
-  const { beds, loading: bedsLoading } = useBeds({ facilityId: currentFacility?.id });
+  const { currentFacility, accessibleFacilities, profile } = useAuth();
+  const isRegional = isRegionalOrHigher(profile);
+
+  // View mode: 'facility' for single facility, 'region' for all facilities
+  const [viewMode, setViewMode] = useState<'facility' | 'region'>('facility');
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
+
+  // Set initial selected facility
+  useEffect(() => {
+    if (currentFacility?.id && !selectedFacilityId) {
+      setSelectedFacilityId(currentFacility.id);
+    }
+  }, [currentFacility?.id, selectedFacilityId]);
+
+  // Determine which facility to show (or all for region view)
+  const activeFacilityId = viewMode === 'region' ? null : (selectedFacilityId || currentFacility?.id);
+  const activeFacility = viewMode === 'region'
+    ? null
+    : accessibleFacilities.find(f => f.id === activeFacilityId) || currentFacility;
+
+  const { wings } = useWings({ facilityId: activeFacilityId || undefined });
+  const { beds, loading: bedsLoading } = useBeds({ facilityId: activeFacilityId || undefined });
+
+  // For region view, we need to fetch all facilities' beds
+  const [regionBeds, setRegionBeds] = useState<typeof beds>([]);
+  const [regionWings, setRegionWings] = useState<typeof wings>([]);
+  const [regionLoading, setRegionLoading] = useState(false);
+
+  // Fetch region-wide data when in region view
+  useEffect(() => {
+    async function fetchRegionData() {
+      if (viewMode !== 'region' || accessibleFacilities.length === 0) {
+        setRegionBeds([]);
+        setRegionWings([]);
+        return;
+      }
+
+      setRegionLoading(true);
+      const facilityIds = accessibleFacilities.map(f => f.id);
+
+      // Fetch all wings for accessible facilities
+      const { data: wingsData } = await supabase
+        .from('wings')
+        .select('*')
+        .in('facility_id', facilityIds);
+
+      // Fetch all beds with room and resident info
+      const { data: bedsData } = await supabase
+        .from('beds')
+        .select(`
+          *,
+          room:rooms!inner(
+            id,
+            room_number,
+            has_shared_bathroom,
+            shared_bathroom_group_id,
+            wing:wings!inner(id, name, facility_id)
+          ),
+          resident:residents(*)
+        `)
+        .in('room.wing.facility_id', facilityIds);
+
+      setRegionWings(wingsData || []);
+      setRegionBeds(bedsData || []);
+      setRegionLoading(false);
+    }
+
+    fetchRegionData();
+  }, [viewMode, accessibleFacilities]);
+
+  // Use appropriate data source based on view mode
+  const displayBeds = viewMode === 'region' ? regionBeds : beds;
+  const displayWings = viewMode === 'region' ? regionWings : wings;
+
   const [caseMixBudget, setCaseMixBudget] = useState<PayorRates>(DEFAULT_PAYOR_RATES);
   const [budgetLoading, setBudgetLoading] = useState(true);
 
   // Load case-mix budget from Supabase
   useEffect(() => {
     async function loadCaseMix() {
-      if (!currentFacility?.id) {
+      if (viewMode === 'region') {
+        // Load budgets for all facilities
+        if (accessibleFacilities.length === 0) {
+          setBudgetLoading(false);
+          return;
+        }
+
+        setBudgetLoading(true);
+        const facilityIds = accessibleFacilities.map(f => f.id);
+        const { data } = await supabase
+          .from('facility_settings')
+          .select('facility_id, setting_value')
+          .in('facility_id', facilityIds)
+          .eq('setting_key', 'case_mix');
+
+        const budgets: Record<string, PayorRates> = {};
+        if (data) {
+          data.forEach(item => {
+            budgets[item.facility_id] = item.setting_value as PayorRates;
+          });
+        }
+
+        // Aggregate budgets
+        const aggregated: PayorRates = { ...DEFAULT_PAYOR_RATES };
+        Object.values(budgets).forEach(budget => {
+          Object.keys(aggregated).forEach(key => {
+            aggregated[key as keyof PayorRates] += budget[key as keyof PayorRates] || 0;
+          });
+        });
+        setCaseMixBudget(aggregated);
         setBudgetLoading(false);
-        return;
-      }
-
-      setBudgetLoading(true);
-      const { data, error } = await supabase
-        .from('facility_settings')
-        .select('setting_value')
-        .eq('facility_id', currentFacility.id)
-        .eq('setting_key', 'case_mix')
-        .single();
-
-      if (!error && data?.setting_value) {
-        setCaseMixBudget(data.setting_value as PayorRates);
       } else {
-        // Reset to defaults for facility without settings
-        setCaseMixBudget(DEFAULT_PAYOR_RATES);
+        // Single facility mode
+        if (!activeFacilityId) {
+          setBudgetLoading(false);
+          return;
+        }
+
+        setBudgetLoading(true);
+        const { data, error } = await supabase
+          .from('facility_settings')
+          .select('setting_value')
+          .eq('facility_id', activeFacilityId)
+          .eq('setting_key', 'case_mix')
+          .single();
+
+        if (!error && data?.setting_value) {
+          setCaseMixBudget(data.setting_value as PayorRates);
+        } else {
+          setCaseMixBudget(DEFAULT_PAYOR_RATES);
+        }
+        setBudgetLoading(false);
       }
-      setBudgetLoading(false);
     }
     loadCaseMix();
-  }, [currentFacility?.id]);
+  }, [activeFacilityId, viewMode, accessibleFacilities]);
 
   // Calculate all analytics
   const analytics = useMemo(() => {
     // Total beds calculation
-    const totalBeds = beds.length;
-    const occupiedBeds = beds.filter(b => b.status === 'occupied').length;
-    const vacantBeds = beds.filter(b => b.status === 'vacant').length;
-    const outOfServiceBeds = beds.filter(b => b.status === 'out_of_service').length;
+    const totalBeds = displayBeds.length;
+    const occupiedBeds = displayBeds.filter(b => b.status === 'occupied').length;
+    const vacantBeds = displayBeds.filter(b => b.status === 'vacant').length;
+    const outOfServiceBeds = displayBeds.filter(b => b.status === 'out_of_service').length;
     const actualOccupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
 
     // Budget calculations
@@ -96,7 +201,7 @@ export function Analytics() {
       other: 0,
     };
 
-    beds.forEach(bed => {
+    displayBeds.forEach(bed => {
       if (bed.status === 'occupied' && bed.resident) {
         const payor = bed.resident.payor;
         if (payor === 'private') actualByPayor.private++;
@@ -118,19 +223,19 @@ export function Analytics() {
       caseMixTotal,
       actualByPayor,
     };
-  }, [beds, caseMixBudget]);
+  }, [displayBeds, caseMixBudget]);
 
   // Calculate gender-specific bed availability
   const genderAvailability = useMemo((): GenderAvailability => {
-    const vacantBeds = beds.filter(b => b.status === 'vacant');
+    const vacantBeds = displayBeds.filter(b => b.status === 'vacant');
 
     let maleAvailable = 0;
     let femaleAvailable = 0;
     let eitherAvailable = 0;
 
     // Group beds by room
-    const roomToBeds = new Map<string, typeof beds>();
-    beds.forEach(bed => {
+    const roomToBeds = new Map<string, typeof displayBeds>();
+    displayBeds.forEach(bed => {
       const roomId = bed.room_id || bed.room?.id;
       if (roomId) {
         if (!roomToBeds.has(roomId)) {
@@ -142,7 +247,7 @@ export function Analytics() {
 
     // Group rooms by shared bathroom group
     const bathroomGroupToRooms = new Map<string, Set<string>>();
-    beds.forEach(bed => {
+    displayBeds.forEach(bed => {
       const room = bed.room;
       if (room?.has_shared_bathroom && room?.shared_bathroom_group_id) {
         if (!bathroomGroupToRooms.has(room.shared_bathroom_group_id)) {
@@ -219,9 +324,9 @@ export function Analytics() {
       female: femaleAvailable + eitherAvailable,
       either: eitherAvailable,
     };
-  }, [beds]);
+  }, [displayBeds]);
 
-  const loading = bedsLoading || budgetLoading;
+  const loading = bedsLoading || budgetLoading || regionLoading;
 
   // Helper to calculate variance
   const getVariance = (budget: number, actual: number) => actual - budget;
@@ -246,14 +351,64 @@ export function Analytics() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-primary-500/10 flex items-center justify-center">
-          <Icon name="analytics" size={24} className="text-primary-500" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-primary-500/10 flex items-center justify-center">
+            <Icon name="analytics" size={24} className="text-primary-500" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {viewMode === 'region' ? 'Regional Analytics' : 'Facility Analytics'}
+            </h1>
+            <p className="text-slate-500">
+              {viewMode === 'region'
+                ? `Aggregated data across ${accessibleFacilities.length} facilities`
+                : activeFacility?.name || 'Occupancy tracking, budget analysis, and bed availability'}
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Facility Analytics</h1>
-          <p className="text-slate-500">Occupancy tracking, budget analysis, and bed availability</p>
-        </div>
+
+        {/* Facility/Region Selector - Only for regional users */}
+        {isRegional && accessibleFacilities.length > 1 && (
+          <div className="flex items-center gap-3">
+            {/* View Mode Toggle */}
+            <div className="flex bg-slate-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('facility')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'facility' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Icon name="business" size={16} className="mr-1.5 inline" />
+                Facility
+              </button>
+              <button
+                onClick={() => setViewMode('region')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'region' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Icon name="domain" size={16} className="mr-1.5 inline" />
+                Region
+              </button>
+            </div>
+
+            {/* Facility Selector (only when in facility mode) */}
+            {viewMode === 'facility' && (
+              <select
+                value={selectedFacilityId || ''}
+                onChange={(e) => setSelectedFacilityId(e.target.value)}
+                className="h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+              >
+                {accessibleFacilities.map(facility => (
+                  <option key={facility.id} value={facility.id}>
+                    {facility.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Occupancy Overview */}
@@ -556,8 +711,8 @@ export function Analytics() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {wings.map(wing => {
-            const wingBeds = beds.filter(b => b.room?.wing?.id === wing.id);
+          {displayWings.map(wing => {
+            const wingBeds = displayBeds.filter(b => b.room?.wing?.id === wing.id);
             const wingOccupied = wingBeds.filter(b => b.status === 'occupied').length;
             const wingTotal = wingBeds.length;
             const wingRate = wingTotal > 0 ? Math.round((wingOccupied / wingTotal) * 100) : 0;
