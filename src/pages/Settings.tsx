@@ -38,6 +38,26 @@ interface PayorRates {
   other: number;
 }
 
+type MonthKey = 'january' | 'february' | 'march' | 'april' | 'may' | 'june' |
+                'july' | 'august' | 'september' | 'october' | 'november' | 'december';
+
+type MonthlyPayorRates = Record<MonthKey, PayorRates>;
+
+const MONTHS: { key: MonthKey; label: string; short: string }[] = [
+  { key: 'january', label: 'January', short: 'Jan' },
+  { key: 'february', label: 'February', short: 'Feb' },
+  { key: 'march', label: 'March', short: 'Mar' },
+  { key: 'april', label: 'April', short: 'Apr' },
+  { key: 'may', label: 'May', short: 'May' },
+  { key: 'june', label: 'June', short: 'Jun' },
+  { key: 'july', label: 'July', short: 'Jul' },
+  { key: 'august', label: 'August', short: 'Aug' },
+  { key: 'september', label: 'September', short: 'Sep' },
+  { key: 'october', label: 'October', short: 'Oct' },
+  { key: 'november', label: 'November', short: 'Nov' },
+  { key: 'december', label: 'December', short: 'Dec' },
+];
+
 const DEFAULT_PAYOR_RATES: PayorRates = {
   private: 0,
   medicare: 0,
@@ -47,13 +67,28 @@ const DEFAULT_PAYOR_RATES: PayorRates = {
   other: 0,
 };
 
+const DEFAULT_MONTHLY_RATES: MonthlyPayorRates = {
+  january: { ...DEFAULT_PAYOR_RATES },
+  february: { ...DEFAULT_PAYOR_RATES },
+  march: { ...DEFAULT_PAYOR_RATES },
+  april: { ...DEFAULT_PAYOR_RATES },
+  may: { ...DEFAULT_PAYOR_RATES },
+  june: { ...DEFAULT_PAYOR_RATES },
+  july: { ...DEFAULT_PAYOR_RATES },
+  august: { ...DEFAULT_PAYOR_RATES },
+  september: { ...DEFAULT_PAYOR_RATES },
+  october: { ...DEFAULT_PAYOR_RATES },
+  november: { ...DEFAULT_PAYOR_RATES },
+  december: { ...DEFAULT_PAYOR_RATES },
+};
+
 export function Settings() {
   const { currentFacility } = useOutletContext<LayoutContext>();
   const { profile } = useAuth();
   const canEditBudgetedBeds = isSuperuser(profile);
 
   // Budget settings state
-  const [payorRates, setPayorRates] = useState<PayorRates>(DEFAULT_PAYOR_RATES);
+  const [monthlyRates, setMonthlyRates] = useState<MonthlyPayorRates>(DEFAULT_MONTHLY_RATES);
   const [budgetSaved, setBudgetSaved] = useState(false);
   const [budgetLoading, setBudgetLoading] = useState(true);
 
@@ -148,14 +183,39 @@ export function Settings() {
         .from('facility_settings')
         .select('setting_value')
         .eq('facility_id', currentFacility.id)
-        .eq('setting_key', 'case_mix')
+        .eq('setting_key', 'case_mix_monthly')
         .single();
 
       if (!error && data?.setting_value) {
-        setPayorRates(data.setting_value as PayorRates);
+        // Merge with defaults in case new months are added
+        const loaded = data.setting_value as Partial<MonthlyPayorRates>;
+        const merged = { ...DEFAULT_MONTHLY_RATES };
+        for (const month of MONTHS) {
+          if (loaded[month.key]) {
+            merged[month.key] = { ...DEFAULT_PAYOR_RATES, ...loaded[month.key] };
+          }
+        }
+        setMonthlyRates(merged);
       } else {
-        // Reset to defaults for new facility
-        setPayorRates(DEFAULT_PAYOR_RATES);
+        // Check for legacy single-value case_mix and migrate
+        const { data: legacyData } = await supabase
+          .from('facility_settings')
+          .select('setting_value')
+          .eq('facility_id', currentFacility.id)
+          .eq('setting_key', 'case_mix')
+          .single();
+
+        if (legacyData?.setting_value) {
+          // Apply legacy values to all months
+          const legacyRates = legacyData.setting_value as PayorRates;
+          const migrated = { ...DEFAULT_MONTHLY_RATES };
+          for (const month of MONTHS) {
+            migrated[month.key] = { ...legacyRates };
+          }
+          setMonthlyRates(migrated);
+        } else {
+          setMonthlyRates(DEFAULT_MONTHLY_RATES);
+        }
       }
       setBudgetLoading(false);
     }
@@ -175,9 +235,19 @@ export function Settings() {
   // Calculate total beds
   const totalBeds = wings.reduce((sum, wing) => sum + (wing.total_beds || 0), 0);
 
-  // Calculate case-mix total and derived occupancy target
-  const caseMixTotal = Object.values(payorRates).reduce((sum, val) => sum + val, 0);
-  const calculatedOccupancyTarget = totalBeds > 0 ? Math.round((caseMixTotal / totalBeds) * 100) : 0;
+  // Calculate case-mix totals (monthly and annual)
+  const getMonthTotal = (month: MonthKey): number => {
+    const rates = monthlyRates[month];
+    return Object.values(rates).reduce((sum, val) => sum + val, 0);
+  };
+
+  const getPayorAnnualTotal = (payor: keyof PayorRates): number => {
+    return MONTHS.reduce((sum, m) => sum + monthlyRates[m.key][payor], 0);
+  };
+
+  const annualTotal = MONTHS.reduce((sum, m) => sum + getMonthTotal(m.key), 0);
+  const averageMonthlyBudget = Math.round(annualTotal / 12);
+  const calculatedOccupancyTarget = totalBeds > 0 ? Math.round((averageMonthlyBudget / totalBeds) * 100) : 0;
 
   const handleSaveBudget = async () => {
     if (!currentFacility?.id) return;
@@ -186,8 +256,8 @@ export function Settings() {
       .from('facility_settings')
       .upsert({
         facility_id: currentFacility.id,
-        setting_key: 'case_mix',
-        setting_value: payorRates,
+        setting_key: 'case_mix_monthly',
+        setting_value: monthlyRates,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'facility_id,setting_key' });
 
@@ -197,12 +267,14 @@ export function Settings() {
     }
   };
 
-  const updatePayorRate = (payor: keyof PayorRates, value: string) => {
+  const updateMonthlyRate = (month: MonthKey, payor: keyof PayorRates, value: string) => {
     const numValue = value === '' ? 0 : Number(value);
-    // Validate non-negative number
     const validation = validateNonNegativeNumber(numValue, payor);
     if (validation.valid) {
-      setPayorRates((prev) => ({ ...prev, [payor]: numValue }));
+      setMonthlyRates((prev) => ({
+        ...prev,
+        [month]: { ...prev[month], [payor]: numValue },
+      }));
     }
   };
 
@@ -793,7 +865,7 @@ export function Settings() {
           </div>
         </div>
 
-        {/* Case-Mix (Budgeted Residents by Payor) */}
+        {/* Case-Mix (Budgeted Residents by Payor - Monthly) */}
         {budgetLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
@@ -803,81 +875,111 @@ export function Settings() {
         <div>
           <label className="text-slate-700 text-sm font-semibold flex items-center gap-2 mb-3">
             <Icon name="pie_chart" size={16} className="text-slate-400" />
-            Case-Mix <span className="font-normal text-slate-500">(Budgeted Residents)</span>
+            Case-Mix Budget by Month <span className="font-normal text-slate-500">(Budgeted Residents)</span>
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Private</label>
-              <input
-                type="number"
-                min="0"
-                value={payorRates.private || ''}
-                onChange={(e) => updatePayorRate('private', e.target.value)}
-                placeholder="0"
-                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Medicare</label>
-              <input
-                type="number"
-                min="0"
-                value={payorRates.medicare || ''}
-                onChange={(e) => updatePayorRate('medicare', e.target.value)}
-                placeholder="0"
-                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Medicaid</label>
-              <input
-                type="number"
-                min="0"
-                value={payorRates.medicaid || ''}
-                onChange={(e) => updatePayorRate('medicaid', e.target.value)}
-                placeholder="0"
-                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Managed Care</label>
-              <input
-                type="number"
-                min="0"
-                value={payorRates.managed_care || ''}
-                onChange={(e) => updatePayorRate('managed_care', e.target.value)}
-                placeholder="0"
-                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Hospice</label>
-              <input
-                type="number"
-                min="0"
-                value={payorRates.hospice || ''}
-                onChange={(e) => updatePayorRate('hospice', e.target.value)}
-                placeholder="0"
-                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Other</label>
-              <input
-                type="number"
-                min="0"
-                value={payorRates.other || ''}
-                onChange={(e) => updatePayorRate('other', e.target.value)}
-                placeholder="0"
-                className="w-full h-12 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all text-center font-semibold"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-green-600 mb-1">Total</label>
-              <div className="w-full h-12 px-3 border border-green-200 rounded-lg bg-green-50 flex items-center justify-center">
-                <span className="text-lg font-bold text-green-600">{caseMixTotal}</span>
-              </div>
-            </div>
+
+          <div className="overflow-x-auto border border-slate-200 rounded-lg">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 sticky left-0 bg-slate-50">Month</th>
+                  <th className="px-2 py-2 text-center text-xs font-semibold text-slate-600 min-w-[70px]">Private</th>
+                  <th className="px-2 py-2 text-center text-xs font-semibold text-slate-600 min-w-[70px]">Medicare</th>
+                  <th className="px-2 py-2 text-center text-xs font-semibold text-slate-600 min-w-[70px]">Medicaid</th>
+                  <th className="px-2 py-2 text-center text-xs font-semibold text-slate-600 min-w-[80px]">Managed Care</th>
+                  <th className="px-2 py-2 text-center text-xs font-semibold text-slate-600 min-w-[70px]">Hospice</th>
+                  <th className="px-2 py-2 text-center text-xs font-semibold text-slate-600 min-w-[70px]">Other</th>
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-green-600 min-w-[70px] bg-green-50">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MONTHS.map((month, idx) => {
+                  const monthTotal = getMonthTotal(month.key);
+                  return (
+                    <tr key={month.key} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                      <td className="px-3 py-1.5 text-slate-700 font-medium sticky left-0 bg-inherit border-r border-slate-100">
+                        {month.label}
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlyRates[month.key].private || ''}
+                          onChange={(e) => updateMonthlyRate(month.key, 'private', e.target.value)}
+                          placeholder="0"
+                          className="w-full h-8 px-2 border border-slate-200 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50 focus:border-primary-500"
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlyRates[month.key].medicare || ''}
+                          onChange={(e) => updateMonthlyRate(month.key, 'medicare', e.target.value)}
+                          placeholder="0"
+                          className="w-full h-8 px-2 border border-slate-200 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50 focus:border-primary-500"
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlyRates[month.key].medicaid || ''}
+                          onChange={(e) => updateMonthlyRate(month.key, 'medicaid', e.target.value)}
+                          placeholder="0"
+                          className="w-full h-8 px-2 border border-slate-200 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50 focus:border-primary-500"
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlyRates[month.key].managed_care || ''}
+                          onChange={(e) => updateMonthlyRate(month.key, 'managed_care', e.target.value)}
+                          placeholder="0"
+                          className="w-full h-8 px-2 border border-slate-200 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50 focus:border-primary-500"
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlyRates[month.key].hospice || ''}
+                          onChange={(e) => updateMonthlyRate(month.key, 'hospice', e.target.value)}
+                          placeholder="0"
+                          className="w-full h-8 px-2 border border-slate-200 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50 focus:border-primary-500"
+                        />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlyRates[month.key].other || ''}
+                          onChange={(e) => updateMonthlyRate(month.key, 'other', e.target.value)}
+                          placeholder="0"
+                          className="w-full h-8 px-2 border border-slate-200 rounded text-center text-sm focus:outline-none focus:ring-1 focus:ring-primary-500/50 focus:border-primary-500"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5 text-center font-semibold text-green-600 bg-green-50/50">
+                        {monthTotal}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="bg-slate-100 border-t-2 border-slate-300">
+                <tr>
+                  <td className="px-3 py-2 font-semibold text-slate-700 sticky left-0 bg-slate-100">Annual Total</td>
+                  <td className="px-2 py-2 text-center font-semibold text-slate-700">{getPayorAnnualTotal('private')}</td>
+                  <td className="px-2 py-2 text-center font-semibold text-slate-700">{getPayorAnnualTotal('medicare')}</td>
+                  <td className="px-2 py-2 text-center font-semibold text-slate-700">{getPayorAnnualTotal('medicaid')}</td>
+                  <td className="px-2 py-2 text-center font-semibold text-slate-700">{getPayorAnnualTotal('managed_care')}</td>
+                  <td className="px-2 py-2 text-center font-semibold text-slate-700">{getPayorAnnualTotal('hospice')}</td>
+                  <td className="px-2 py-2 text-center font-semibold text-slate-700">{getPayorAnnualTotal('other')}</td>
+                  <td className="px-2 py-2 text-center font-bold text-green-700 bg-green-100">{annualTotal}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
 
@@ -885,9 +987,9 @@ export function Settings() {
         <div className="mt-6 bg-slate-50 rounded-lg border border-slate-200" style={{ padding: '24px' }}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-medium text-slate-900">Calculated Occupancy Target</p>
+              <p className="text-sm font-medium text-slate-900">Calculated Average Occupancy Target</p>
               <p className="text-xs text-slate-500">
-                {caseMixTotal} budgeted residents / {totalBeds} total beds
+                {averageMonthlyBudget} avg monthly budgeted residents / {totalBeds} total beds
               </p>
             </div>
             <div className="text-right">
@@ -904,7 +1006,7 @@ export function Settings() {
           </div>
           {calculatedOccupancyTarget > 100 && (
             <p className="text-xs text-red-600 mt-2">
-              Warning: Budgeted residents exceed total bed capacity
+              Warning: Average budgeted residents exceed total bed capacity
             </p>
           )}
         </div>

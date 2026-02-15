@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Icon } from '../components';
 import { useWings } from '../hooks/useWings';
 import { useBeds } from '../hooks/useBeds';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { isRegionalOrHigher } from '../lib/permissions';
-import type { Gender } from '../types';
+import type { Gender, Company } from '../types';
 
 interface PayorRates {
   private: number;
@@ -15,6 +15,11 @@ interface PayorRates {
   hospice: number;
   other: number;
 }
+
+type MonthKey = 'january' | 'february' | 'march' | 'april' | 'may' | 'june' |
+                'july' | 'august' | 'september' | 'october' | 'november' | 'december';
+
+type MonthlyPayorRates = Record<MonthKey, PayorRates>;
 
 interface GenderAvailability {
   male: number;
@@ -29,6 +34,23 @@ const DEFAULT_PAYOR_RATES: PayorRates = {
   managed_care: 0,
   hospice: 0,
   other: 0,
+};
+
+const MONTH_KEYS: MonthKey[] = [
+  'january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december'
+];
+
+// Get current month key
+const getCurrentMonthKey = (): MonthKey => {
+  return MONTH_KEYS[new Date().getMonth()];
+};
+
+// Extract current month's budget from monthly data
+const extractCurrentMonthBudget = (monthlyData: MonthlyPayorRates | null): PayorRates => {
+  if (!monthlyData) return DEFAULT_PAYOR_RATES;
+  const currentMonth = getCurrentMonthKey();
+  return monthlyData[currentMonth] || DEFAULT_PAYOR_RATES;
 };
 
 const PAYOR_LABELS: Record<string, string> = {
@@ -47,6 +69,25 @@ export function Analytics() {
   // View mode: 'facility' for single facility, 'region' for all facilities
   const [viewMode, setViewMode] = useState<'facility' | 'region'>('facility');
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
+  const [facilityDropdownOpen, setFacilityDropdownOpen] = useState(false);
+  const facilityDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close facility dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (facilityDropdownRef.current && !facilityDropdownRef.current.contains(event.target as Node)) {
+        setFacilityDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleFacilitySelect = (facility: Company) => {
+    setSelectedFacilityId(facility.id);
+    setViewMode('facility');
+    setFacilityDropdownOpen(false);
+  };
 
   // Set initial selected facility
   useEffect(() => {
@@ -118,7 +159,7 @@ export function Analytics() {
   const [caseMixBudget, setCaseMixBudget] = useState<PayorRates>(DEFAULT_PAYOR_RATES);
   const [budgetLoading, setBudgetLoading] = useState(true);
 
-  // Load case-mix budget from Supabase
+  // Load case-mix budget from Supabase (monthly data, use current month)
   useEffect(() => {
     async function loadCaseMix() {
       if (viewMode === 'region') {
@@ -130,26 +171,49 @@ export function Analytics() {
 
         setBudgetLoading(true);
         const facilityIds = accessibleFacilities.map(f => f.id);
-        const { data } = await supabase
-          .from('facility_settings')
-          .select('facility_id, setting_value')
-          .in('facility_id', facilityIds)
-          .eq('setting_key', 'case_mix');
 
-        const budgets: Record<string, PayorRates> = {};
-        if (data) {
-          data.forEach(item => {
-            budgets[item.facility_id] = item.setting_value as PayorRates;
+        // Load both monthly and legacy data
+        const [{ data: monthlyData }, { data: legacyData }] = await Promise.all([
+          supabase
+            .from('facility_settings')
+            .select('facility_id, setting_value')
+            .in('facility_id', facilityIds)
+            .eq('setting_key', 'case_mix_monthly'),
+          supabase
+            .from('facility_settings')
+            .select('facility_id, setting_value')
+            .in('facility_id', facilityIds)
+            .eq('setting_key', 'case_mix'),
+        ]);
+
+        // Track which facilities have monthly data
+        const facilitiesWithMonthly = new Set<string>();
+        const aggregated: PayorRates = { ...DEFAULT_PAYOR_RATES };
+
+        // First, add monthly data (preferred)
+        if (monthlyData) {
+          monthlyData.forEach(item => {
+            facilitiesWithMonthly.add(item.facility_id);
+            const monthlyRates = item.setting_value as MonthlyPayorRates;
+            const currentMonthBudget = extractCurrentMonthBudget(monthlyRates);
+            Object.keys(aggregated).forEach(key => {
+              aggregated[key as keyof PayorRates] += currentMonthBudget[key as keyof PayorRates] || 0;
+            });
           });
         }
 
-        // Aggregate budgets
-        const aggregated: PayorRates = { ...DEFAULT_PAYOR_RATES };
-        Object.values(budgets).forEach(budget => {
-          Object.keys(aggregated).forEach(key => {
-            aggregated[key as keyof PayorRates] += budget[key as keyof PayorRates] || 0;
+        // Then, add legacy data for facilities that don't have monthly data
+        if (legacyData) {
+          legacyData.forEach(item => {
+            if (!facilitiesWithMonthly.has(item.facility_id)) {
+              const budget = item.setting_value as PayorRates;
+              Object.keys(aggregated).forEach(key => {
+                aggregated[key as keyof PayorRates] += budget[key as keyof PayorRates] || 0;
+              });
+            }
           });
-        });
+        }
+
         setCaseMixBudget(aggregated);
         setBudgetLoading(false);
       } else {
@@ -160,17 +224,32 @@ export function Analytics() {
         }
 
         setBudgetLoading(true);
-        const { data, error } = await supabase
+
+        // Try monthly data first
+        const { data: monthlyData, error: monthlyError } = await supabase
           .from('facility_settings')
           .select('setting_value')
           .eq('facility_id', activeFacilityId)
-          .eq('setting_key', 'case_mix')
+          .eq('setting_key', 'case_mix_monthly')
           .single();
 
-        if (!error && data?.setting_value) {
-          setCaseMixBudget(data.setting_value as PayorRates);
+        if (!monthlyError && monthlyData?.setting_value) {
+          const currentMonthBudget = extractCurrentMonthBudget(monthlyData.setting_value as MonthlyPayorRates);
+          setCaseMixBudget(currentMonthBudget);
         } else {
-          setCaseMixBudget(DEFAULT_PAYOR_RATES);
+          // Fallback to legacy case_mix
+          const { data, error } = await supabase
+            .from('facility_settings')
+            .select('setting_value')
+            .eq('facility_id', activeFacilityId)
+            .eq('setting_key', 'case_mix')
+            .single();
+
+          if (!error && data?.setting_value) {
+            setCaseMixBudget(data.setting_value as PayorRates);
+          } else {
+            setCaseMixBudget(DEFAULT_PAYOR_RATES);
+          }
         }
         setBudgetLoading(false);
       }
@@ -371,42 +450,90 @@ export function Analytics() {
         {/* Facility/Region Selector - Only for regional users */}
         {isRegional && accessibleFacilities.length > 1 && (
           <div className="flex items-center gap-3">
-            {/* View Mode Toggle */}
-            <div className="flex bg-slate-100 rounded-lg p-1">
+            {/* Facility Dropdown - matches TopNavBar FacilitySwitcher style */}
+            <div className="relative" ref={facilityDropdownRef}>
               <button
-                onClick={() => setViewMode('facility')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'facility' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                onClick={() => setFacilityDropdownOpen(!facilityDropdownOpen)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  viewMode === 'facility'
+                    ? 'bg-primary-50 border border-primary-200'
+                    : 'bg-[#e7edf3] hover:bg-[#dde5ed]'
                 }`}
               >
-                <Icon name="business" size={16} className="mr-1.5 inline" />
-                Facility
+                <Icon name="business" size={18} className={viewMode === 'facility' ? 'text-primary-500' : 'text-[#4c739a]'} />
+                <div className="flex flex-col items-start">
+                  <span className="text-xs text-[#4c739a] font-medium">Facility</span>
+                  <span className={`text-sm font-semibold ${viewMode === 'facility' ? 'text-primary-700' : 'text-[#0d141b]'}`}>
+                    {activeFacility?.facility_code || 'Select'}
+                  </span>
+                </div>
+                <Icon
+                  name={facilityDropdownOpen ? 'expand_less' : 'expand_more'}
+                  size={20}
+                  className="text-[#4c739a] ml-1"
+                />
               </button>
-              <button
-                onClick={() => setViewMode('region')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  viewMode === 'region' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                <Icon name="domain" size={16} className="mr-1.5 inline" />
-                Region
-              </button>
+
+              {facilityDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-lg border border-[#e7edf3] py-2 z-50">
+                  <div className="px-4 py-2 border-b border-[#e7edf3]">
+                    <h3 className="font-semibold text-[#0d141b] text-sm">Select Facility</h3>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto py-1">
+                    {accessibleFacilities.map((facility) => {
+                      const isSelected = facility.id === selectedFacilityId && viewMode === 'facility';
+                      return (
+                        <button
+                          key={facility.id}
+                          onClick={() => handleFacilitySelect(facility)}
+                          className={`w-full px-4 py-2 text-left flex items-center gap-3 transition-colors ${
+                            isSelected
+                              ? 'bg-primary-50 text-primary-700'
+                              : 'hover:bg-[#f6f7f8] text-[#0d141b]'
+                          }`}
+                        >
+                          <div
+                            className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${
+                              isSelected
+                                ? 'bg-primary-500 text-white'
+                                : 'bg-[#e7edf3] text-[#4c739a]'
+                            }`}
+                          >
+                            {facility.facility_code}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium truncate ${isSelected ? 'text-primary-700' : 'text-[#0d141b]'}`}>
+                              {facility.name}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <Icon name="check" size={18} className="text-primary-500 flex-shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Facility Selector (only when in facility mode) */}
-            {viewMode === 'facility' && (
-              <select
-                value={selectedFacilityId || ''}
-                onChange={(e) => setSelectedFacilityId(e.target.value)}
-                className="h-10 px-3 border border-slate-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-              >
-                {accessibleFacilities.map(facility => (
-                  <option key={facility.id} value={facility.id}>
-                    {facility.name}
-                  </option>
-                ))}
-              </select>
-            )}
+            {/* Region Button */}
+            <button
+              onClick={() => setViewMode('region')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                viewMode === 'region'
+                  ? 'bg-primary-50 border border-primary-200'
+                  : 'bg-[#e7edf3] hover:bg-[#dde5ed]'
+              }`}
+            >
+              <Icon name="domain" size={18} className={viewMode === 'region' ? 'text-primary-500' : 'text-[#4c739a]'} />
+              <div className="flex flex-col items-start">
+                <span className="text-xs text-[#4c739a] font-medium">Region</span>
+                <span className={`text-sm font-semibold ${viewMode === 'region' ? 'text-primary-700' : 'text-[#0d141b]'}`}>
+                  All Facilities
+                </span>
+              </div>
+            </button>
           </div>
         )}
       </div>
