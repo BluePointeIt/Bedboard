@@ -89,12 +89,16 @@ export function Analytics() {
     setFacilityDropdownOpen(false);
   };
 
-  // Set initial selected facility
+  // Sync selected facility with global currentFacility from navbar
   useEffect(() => {
-    if (currentFacility?.id && !selectedFacilityId) {
+    if (currentFacility?.id) {
       setSelectedFacilityId(currentFacility.id);
+      // If not a regional user, always use facility mode
+      if (!isRegional) {
+        setViewMode('facility');
+      }
     }
-  }, [currentFacility?.id, selectedFacilityId]);
+  }, [currentFacility?.id, isRegional]);
 
   // Determine which facility to show (or all for region view)
   const activeFacilityId = viewMode === 'region' ? null : (selectedFacilityId || currentFacility?.id);
